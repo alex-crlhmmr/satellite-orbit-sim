@@ -1,0 +1,65 @@
+# Orbital Simulation Configuration
+
+# Initial orbit (Keplerian elements)
+orbit:
+  semi_major_axis_m: 6778137.0    # ~400 km altitude (ISS-like)
+  eccentricity: 0.0001
+  inclination_deg: 51.6
+  raan_deg: 0.0
+  arg_periapsis_deg: 0.0
+  true_anomaly_deg: 0.0
+
+# Satellite properties
+satellite:
+  mass_kg: 100.0
+  drag_coefficient: 2.2
+  reflectivity_coefficient: 1.5
+  area_to_mass_ratio: 0.01        # m²/kg
+  max_thrust_n: 0.1               # Maximum thrust per axis [N]
+
+# Propagator settings
+propagator:
+  dt: 10.0                        # RK4 timestep [s]
+  enable_j2: true
+  max_j_degree: 6                 # J2 through J6
+  enable_drag: true
+  enable_srp: true
+  enable_third_body: true
+
+# Epoch (J2000 + offset)
+epoch:
+  year: 2024
+  month: 3
+  day: 20
+  hour: 12
+  minute: 0
+  second: 0
+
+# Environment settings
+environment:
+  env_dt: 60.0                    # Time per env.step() [s]
+  max_steps: 1440                 # 1440 * 60s = 1 day
+  reward_type: station_keeping    # station_keeping, orbit_raising, deorbit
+  fuel_penalty: 0.1
+  deorbit_target_altitude_km: 120.0
+
+# Rendering settings
+render:
+  enabled: true
+  width: 1280
+  height: 720
+  fps: 30
+  trail_length: 500               # Number of trail points to keep
+  earth_day_texture: assets/earth_day.jpg
+  earth_night_texture: assets/earth_night.jpg
+  camera_mode: tracking           # 'tracking' (follows sat) or 'fixed' (inertial overview)
+
+# Streaming settings
+stream:
+  enabled: true
+  video_port: 9100
+  telemetry_port: 9101
+  jpeg_quality: 85
+
+# Simulation mode
+mode: propagation                 # propagation (free flight) or rl (agent-controlled)
