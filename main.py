@@ -193,6 +193,7 @@ async def run_simulation(config: dict):
                     sun_pos=sun_pos.numpy(),
                     gmst=gmst,
                     trail_positions=trail_array,
+                    sat_velocity=state[3:6].numpy(),
                 )
 
                 if server is not None:
@@ -256,8 +257,9 @@ def main():
     parser.add_argument("--steps", type=int, default=None,
                         help="Override max_steps")
     parser.add_argument("--camera", type=str, default=None,
-                        choices=["tracking", "fixed", "split"],
-                        help="Camera mode: 'tracking' (follows satellite), 'fixed' (inertial overview), or 'split' (both side by side)")
+                        choices=["tracking", "fixed", "split", "ground_track",
+                                 "nadir", "horizon", "onboard"],
+                        help="Camera mode: 'tracking' (follows satellite), 'fixed' (inertial overview), 'split' (tracking + fixed), 'ground_track' (top-down nadir overview), 'nadir' (onboard camera pointed at Earth), 'horizon' (onboard camera pointed at horizon along velocity), 'onboard' (nadir + horizon split)")
     args = parser.parse_args()
 
     config = load_config(args.config)

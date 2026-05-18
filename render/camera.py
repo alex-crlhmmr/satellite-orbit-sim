@@ -74,6 +74,95 @@ class Camera:
 
         self.look_at(eye, earth_center, up)
 
+    def onboard_nadir(self, sat_pos, earth_center=(0, 0, 0)):
+        """Onboard camera at the satellite, looking straight at Earth center
+        (i.e. nadir-pointing). Screen-up = ECI Z (≈ north), with a fallback
+        near the poles to avoid a degenerate up-vector.
+        """
+        sat_pos = np.asarray(sat_pos, dtype=np.float64)
+        earth_center = np.asarray(earth_center, dtype=np.float64)
+
+        radial = sat_pos - earth_center
+        dist = np.linalg.norm(radial)
+        if dist < 1.0:
+            return
+        radial_unit = radial / dist
+
+        # Look direction = -radial (sat → Earth center)
+        up = np.array([0.0, 0.0, 1.0])
+        if abs(np.dot(radial_unit, up)) > 0.95:
+            up = np.array([0.0, 1.0, 0.0])
+
+        self.look_at(sat_pos, earth_center, up)
+
+    def onboard_horizon(self, sat_pos, sat_velocity=None,
+                        earth_center=(0, 0, 0)):
+        """Onboard forward-looking camera at the satellite, aimed along the
+        velocity direction (with the radial component removed). Screen-up =
+        +radial, so Earth curves up from the bottom and space fills the top.
+        """
+        sat_pos = np.asarray(sat_pos, dtype=np.float64)
+        earth_center = np.asarray(earth_center, dtype=np.float64)
+
+        radial = sat_pos - earth_center
+        dist = np.linalg.norm(radial)
+        if dist < 1.0:
+            return
+        radial_unit = radial / dist
+
+        # Forward = velocity projected perpendicular to radial (pure tangent)
+        if sat_velocity is not None:
+            v = np.asarray(sat_velocity, dtype=np.float64)
+            v_tan = v - np.dot(v, radial_unit) * radial_unit
+            v_mag = np.linalg.norm(v_tan)
+            if v_mag > 1e-6:
+                forward = v_tan / v_mag
+            else:
+                forward = None
+        else:
+            forward = None
+
+        if forward is None:
+            # Fallback: prograde-ish tangent using ECI Z × radial
+            cross = np.cross(np.array([0.0, 0.0, 1.0]), radial_unit)
+            c_mag = np.linalg.norm(cross)
+            forward = cross / c_mag if c_mag > 1e-6 else np.array([1.0, 0.0, 0.0])
+
+        eye = sat_pos
+        target = sat_pos + forward * 1.0e7
+        up = radial_unit  # away from Earth = "up" on screen
+
+        self.look_at(eye, target, up)
+
+    def ground_track(self, sat_pos, earth_center=(0, 0, 0),
+                     distance_scale: float = 3.0):
+        """Top-down nadir view: camera high above the satellite along its
+        radial, looking down at the sub-satellite point. Follows the
+        satellite around its orbit so the visible patch of Earth is always
+        centered on the spot directly below it.
+        """
+        sat_pos = np.asarray(sat_pos, dtype=np.float64)
+        earth_center = np.asarray(earth_center, dtype=np.float64)
+
+        radial = sat_pos - earth_center
+        dist = np.linalg.norm(radial)
+        if dist < 1.0:
+            return
+        radial_unit = radial / dist
+
+        eye = earth_center + radial_unit * dist * distance_scale
+
+        # Sub-satellite point on Earth's surface
+        r_earth = 6378137.0
+        target = earth_center + radial_unit * r_earth
+
+        # ECI Z as up; fall back near the poles to avoid degenerate cross
+        up = np.array([0.0, 0.0, 1.0])
+        if abs(np.dot(radial_unit, up)) > 0.95:
+            up = np.array([0.0, 1.0, 0.0])
+
+        self.look_at(eye, target, up)
+
     def fixed_inertial(self, sat_pos, earth_center=(0, 0, 0),
                        view_distance: float = 2.5e7):
         """Fixed camera in the inertial frame, looking at Earth center.

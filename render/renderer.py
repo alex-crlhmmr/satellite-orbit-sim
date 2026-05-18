@@ -114,7 +114,7 @@ class Renderer:
             self._draw_satellite(pos, vp)
 
     def render_frame(self, sat_positions, sun_pos, gmst: float,
-                     trail_positions=None) -> np.ndarray:
+                     trail_positions=None, sat_velocity=None) -> np.ndarray:
         """Render a complete frame and return the pixel data.
 
         Args:
@@ -137,26 +137,32 @@ class Renderer:
 
         mode = getattr(self, 'camera_mode', 'tracking')
 
-        if mode == 'split':
-            # Render both views side by side into one frame
-            # Left half: tracking view, Right half: fixed inertial view
+        if mode == 'split' or mode == 'onboard':
+            # Render two views side by side into one frame
             half_w = self.width // 2
 
-            # --- Left: tracking ---
             self.fbo.use()
             self.ctx.clear(0.0, 0.0, 0.02, 1.0)
-            self.ctx.viewport = (0, 0, half_w, self.height)
-            self.camera.track_satellite(sat_positions[0])
-            # Adjust aspect ratio for half-width
+
             old_aspect = self.camera.aspect
             self.camera.aspect = (half_w / self.height)
+
+            # --- Left half ---
+            self.ctx.viewport = (0, 0, half_w, self.height)
+            if mode == 'split':
+                self.camera.track_satellite(sat_positions[0])
+            else:  # onboard
+                self.camera.onboard_nadir(sat_positions[0])
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
             self._render_scene(sat_positions, sun_dir, gmst, trail_positions, vp)
 
-            # --- Right: fixed inertial ---
+            # --- Right half ---
             self.ctx.viewport = (half_w, 0, self.width - half_w, self.height)
-            self.camera.fixed_inertial(sat_positions[0])
+            if mode == 'split':
+                self.camera.fixed_inertial(sat_positions[0])
+            else:  # onboard
+                self.camera.onboard_horizon(sat_positions[0], sat_velocity)
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
             self._render_scene(sat_positions, sun_dir, gmst, trail_positions, vp)
@@ -172,6 +178,12 @@ class Renderer:
 
             if mode == 'fixed':
                 self.camera.fixed_inertial(sat_positions[0])
+            elif mode == 'ground_track':
+                self.camera.ground_track(sat_positions[0])
+            elif mode == 'nadir':
+                self.camera.onboard_nadir(sat_positions[0])
+            elif mode == 'horizon':
+                self.camera.onboard_horizon(sat_positions[0], sat_velocity)
             else:
                 self.camera.track_satellite(sat_positions[0])
             vp = self.camera.vp_matrix()
