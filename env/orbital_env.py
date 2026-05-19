@@ -37,8 +37,7 @@ from core.elements import (
     keplerian_to_cartesian,
 )
 from core.frames import eci_to_rtn, rtn_to_eci
-from core.gravity import zonal_acceleration
-from core.atmosphere import drag_acceleration
+from core.propagator import Propagator
 from env.rewards import RewardFunction
 
 
@@ -128,48 +127,45 @@ def cylindrical_shadow(r_sat: torch.Tensor, r_sun: torch.Tensor) -> float:
 # Default configuration
 # ---------------------------------------------------------------------------
 
+# This MUST mirror the schema in config/default.yaml so the same YAML
+# file drives both the free-flight simulator (main.py) and this RL env.
 DEFAULT_CONFIG = {
     # Orbital elements (ISS-like orbit)
     "orbit": {
-        "a": 6778137.0,       # Semi-major axis [m] (~400 km altitude)
-        "e": 0.0001,          # Eccentricity
-        "i": 51.6,            # Inclination [deg]
-        "raan": 0.0,          # RAAN [deg]
-        "argp": 0.0,          # Argument of periapsis [deg]
-        "nu": 0.0,            # True anomaly [deg]
+        "semi_major_axis_m": 6778137.0,   # ~400 km altitude
+        "eccentricity": 0.0001,
+        "inclination_deg": 51.6,
+        "raan_deg": 0.0,
+        "arg_periapsis_deg": 0.0,
+        "true_anomaly_deg": 0.0,
     },
     # Satellite properties
     "satellite": {
-        "cd": 2.2,            # Drag coefficient
-        "cr": 1.5,            # Reflectivity coefficient
-        "area_mass": 0.01,    # Area-to-mass ratio [m^2/kg]
-        "mass": 100.0,        # Mass [kg]
-        "max_thrust": 1.0,    # Maximum thrust [N]
+        "mass_kg": 100.0,
+        "drag_coefficient": 2.2,
+        "reflectivity_coefficient": 1.5,
+        "area_to_mass_ratio": 0.01,       # m^2/kg
+        "max_thrust_n": 1.0,              # max thrust per axis [N]
     },
-    # Simulation parameters
-    "sim": {
-        "dt": 10.0,           # RK4 integration step [s]
-        "env_dt": 60.0,       # Environment step duration [s]
-        "max_steps": 1000,    # Maximum episode steps
-    },
-    # Reward configuration
-    "reward": {
-        "type": "station_keeping",
-        "weights": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        "fuel_penalty": 0.1,
-        "scale": 1.0,
-        "target_altitude": 150000.0,
-    },
-    # Propagator configuration
+    # Propagator settings (force model + integration step)
     "propagator": {
-        "j2": True,
-        "j3": False,
-        "j4": False,
-        "j5": False,
-        "j6": False,
-        "drag": True,
-        "max_degree": 2,
+        "dt": 10.0,                       # RK4 step [s]
+        "enable_j2": True,
+        "max_j_degree": 6,                # J2 through J6
+        "enable_drag": True,
+        "enable_srp": True,
+        "enable_third_body": True,
         "epoch_jd": JD_J2000,
+    },
+    # Environment / episode + reward settings
+    "environment": {
+        "env_dt": 60.0,                   # time per env.step() [s]
+        "max_steps": 1000,
+        "reward_type": "station_keeping",
+        "reward_weights": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "fuel_penalty": 0.1,
+        "reward_scale": 1.0,
+        "deorbit_target_altitude_km": 150.0,
     },
 }
 
@@ -185,6 +181,46 @@ def _deep_merge(base: dict, override: dict) -> dict:
     return merged
 
 
+# Old env-only key names -> their canonical replacement. Passing the old
+# names used to be silently ignored (the YAML config was a no-op against
+# the env's private defaults); now it raises so the mismatch is loud.
+_LEGACY_KEYS = {
+    ("orbit", "a"): "orbit.semi_major_axis_m",
+    ("orbit", "e"): "orbit.eccentricity",
+    ("orbit", "i"): "orbit.inclination_deg",
+    ("orbit", "raan"): "orbit.raan_deg",
+    ("orbit", "argp"): "orbit.arg_periapsis_deg",
+    ("orbit", "nu"): "orbit.true_anomaly_deg",
+    ("satellite", "cd"): "satellite.drag_coefficient",
+    ("satellite", "cr"): "satellite.reflectivity_coefficient",
+    ("satellite", "area_mass"): "satellite.area_to_mass_ratio",
+    ("satellite", "mass"): "satellite.mass_kg",
+    ("satellite", "max_thrust"): "satellite.max_thrust_n",
+    ("propagator", "j2"): "propagator.enable_j2",
+    ("propagator", "drag"): "propagator.enable_drag",
+    ("propagator", "max_degree"): "propagator.max_j_degree",
+}
+
+
+def _reject_legacy_config(config: dict) -> None:
+    """Raise a clear error if a caller passes the pre-unification key names."""
+    problems = []
+    for (section, key), canonical in _LEGACY_KEYS.items():
+        sec = config.get(section)
+        if isinstance(sec, dict) and key in sec:
+            problems.append(f"  {section}.{key}  ->  {canonical}")
+    if "sim" in config:
+        problems.append("  the 'sim' block  ->  'propagator.dt' + 'environment.*'")
+    if "reward" in config:
+        problems.append("  the 'reward' block  ->  'environment.reward_*' keys")
+    if problems:
+        raise ValueError(
+            "OrbitalEnv received legacy config keys. It now shares the "
+            "schema in config/default.yaml. Rename:\n"
+            + "\n".join(sorted(set(problems)))
+        )
+
+
 # ---------------------------------------------------------------------------
 # Environment
 # ---------------------------------------------------------------------------
@@ -194,9 +230,11 @@ class OrbitalEnv(gym.Env):
     Gymnasium environment for orbital mechanics with continuous thrust control.
 
     The agent controls a satellite via thrust commands in the RTN
-    (Radial, Along-track, Cross-track) reference frame. The dynamics
-    are propagated using an RK4 integrator with configurable perturbations
-    (zonal harmonics, atmospheric drag).
+    (Radial, Along-track, Cross-track) reference frame. The dynamics are
+    propagated with the shared core.Propagator, so the env uses exactly
+    the same force model as the free-flight simulator (zonal harmonics
+    J2-J6, atmospheric drag, solar radiation pressure, and Sun/Moon
+    third-body perturbations), each individually configurable.
 
     See module docstring for observation and action space details.
     """
@@ -206,47 +244,72 @@ class OrbitalEnv(gym.Env):
     def __init__(self, config: dict = None):
         super().__init__()
 
-        # Merge user config with defaults
+        # Merge user config with defaults (reject pre-unification keys
+        # loudly instead of silently ignoring them)
         if config is None:
-            self.config = DEFAULT_CONFIG.copy()
-            self.config = _deep_merge(DEFAULT_CONFIG, {})
-        else:
-            self.config = _deep_merge(DEFAULT_CONFIG, config)
+            config = {}
+        _reject_legacy_config(config)
+        self.config = _deep_merge(DEFAULT_CONFIG, config)
 
         # Unpack configuration
         orb = self.config["orbit"]
         sat = self.config["satellite"]
-        sim = self.config["sim"]
         prop = self.config["propagator"]
+        env_cfg = self.config["environment"]
 
         # Orbital elements (convert degrees to radians for angular elements)
-        self.a0 = orb["a"]
-        self.e0 = orb["e"]
-        self.i0 = orb["i"] * DEG2RAD
-        self.raan0 = orb["raan"] * DEG2RAD
-        self.argp0 = orb["argp"] * DEG2RAD
-        self.nu0 = orb["nu"] * DEG2RAD
+        self.a0 = orb["semi_major_axis_m"]
+        self.e0 = orb["eccentricity"]
+        self.i0 = orb["inclination_deg"] * DEG2RAD
+        self.raan0 = orb["raan_deg"] * DEG2RAD
+        self.argp0 = orb["arg_periapsis_deg"] * DEG2RAD
+        self.nu0 = orb["true_anomaly_deg"] * DEG2RAD
 
         # Satellite properties
-        self.cd = sat["cd"]
-        self.cr = sat["cr"]
-        self.area_mass = sat["area_mass"]
-        self.mass = sat["mass"]
-        self.max_thrust = sat["max_thrust"]
+        self.cd = sat["drag_coefficient"]
+        self.cr = sat["reflectivity_coefficient"]
+        self.area_mass = sat["area_to_mass_ratio"]
+        self.mass = sat["mass_kg"]
+        self.max_thrust = sat["max_thrust_n"]
 
         # Simulation parameters
-        self.dt = sim["dt"]
-        self.env_dt = sim["env_dt"]
-        self.max_steps = sim["max_steps"]
-
-        # Propagator settings
-        self.use_j2 = prop.get("j2", True)
-        self.use_drag = prop.get("drag", True)
-        self.max_degree = prop.get("max_degree", 2)
+        self.dt = prop["dt"]
+        self.env_dt = env_cfg["env_dt"]
+        self.max_steps = env_cfg["max_steps"]
         self.epoch_jd = prop.get("epoch_jd", JD_J2000)
 
-        # Reward function
-        self.reward_fn = RewardFunction(self.config["reward"])
+        # Build the SAME propagator the free-flight simulator uses, so a
+        # trained policy sees identical physics (J2-J6 + drag + SRP +
+        # Sun/Moon third-body) rather than the old env-only J2+drag model.
+        prop_config = {
+            "mu": MU_EARTH,
+            "dt": self.dt,
+            "enable_j2": prop["enable_j2"],
+            "max_j_degree": prop["max_j_degree"],
+            "enable_drag": prop["enable_drag"],
+            "cd": self.cd,
+            "area_mass": self.area_mass,
+            "enable_srp": prop["enable_srp"],
+            "cr": self.cr,
+            "enable_third_body": prop["enable_third_body"],
+            "epoch_jd": self.epoch_jd,
+            "device": "cpu",
+            "dtype": torch.float64,
+        }
+        # Two instances: one carries thrust, the reference stays ballistic.
+        self._prop = Propagator(prop_config)
+        self._prop_ref = Propagator(prop_config)
+
+        # Reward function (map the unified environment.* keys onto the
+        # RewardFunction config schema)
+        self.reward_fn = RewardFunction({
+            "type": env_cfg["reward_type"],
+            "weights": env_cfg.get("reward_weights", [1.0] * 6),
+            "fuel_penalty": env_cfg.get("fuel_penalty", 0.1),
+            "scale": env_cfg.get("reward_scale", 1.0),
+            "target_altitude": env_cfg.get(
+                "deorbit_target_altitude_km", 150.0) * 1000.0,
+        })
 
         # Compute reference orbit initial state (Cartesian ECI)
         self._init_reference_state()
@@ -356,19 +419,20 @@ class OrbitalEnv(gym.Env):
         thrust_eci = dcm_rtn_to_eci @ thrust_rtn      # (3,)
         self.thrust_accel = thrust_eci
 
-        # Propagate env_dt seconds using RK4 with substeps
-        n_substeps = max(1, int(self.env_dt / self.dt))
-        substep_dt = self.env_dt / n_substeps
+        # Propagate env_dt using the shared Propagator. Absolute time
+        # (t0=elapsed_time) is threaded through so the Sun/Moon advance
+        # instead of staying frozen at epoch.
+        sat_state = torch.cat([self.r, self.v])
+        self._prop.set_thrust(thrust_eci)
+        sat_state, _ = self._prop.propagate(
+            sat_state, self.env_dt, t0=self.elapsed_time)
+        self.r, self.v = sat_state[:3], sat_state[3:6]
 
-        for _ in range(n_substeps):
-            self.r, self.v = self._rk4_step(self.r, self.v, substep_dt, thrust_eci)
-
-        # Also propagate the reference orbit (no thrust, same perturbations)
-        for _ in range(n_substeps):
-            self.r_ref, self.v_ref = self._rk4_step(
-                self.r_ref, self.v_ref, substep_dt,
-                torch.zeros(3, dtype=torch.float64),
-            )
+        # Reference orbit: same force model, no thrust.
+        ref_state = torch.cat([self.r_ref, self.v_ref])
+        ref_state, _ = self._prop_ref.propagate(
+            ref_state, self.env_dt, t0=self.elapsed_time)
+        self.r_ref, self.v_ref = ref_state[:3], ref_state[3:6]
 
         self.elapsed_time += self.env_dt
         self.step_count += 1
@@ -406,86 +470,6 @@ class OrbitalEnv(gym.Env):
         info = self._get_info()
 
         return obs, reward, terminated, truncated, info
-
-    def _rk4_step(
-        self,
-        r: torch.Tensor,
-        v: torch.Tensor,
-        dt: float,
-        thrust_eci: torch.Tensor,
-    ) -> tuple:
-        """
-        Single RK4 integration step for orbital dynamics.
-
-        Args:
-            r: (3,) position ECI [m].
-            v: (3,) velocity ECI [m/s].
-            dt: Time step [s].
-            thrust_eci: (3,) thrust acceleration in ECI [m/s^2].
-
-        Returns:
-            (r_new, v_new): Updated position and velocity.
-        """
-        def deriv(r_k, v_k):
-            a_total = self._compute_acceleration(r_k, v_k) + thrust_eci
-            return v_k, a_total
-
-        # k1
-        dr1, dv1 = deriv(r, v)
-
-        # k2
-        r2 = r + 0.5 * dt * dr1
-        v2 = v + 0.5 * dt * dv1
-        dr2, dv2 = deriv(r2, v2)
-
-        # k3
-        r3 = r + 0.5 * dt * dr2
-        v3 = v + 0.5 * dt * dv2
-        dr3, dv3 = deriv(r3, v3)
-
-        # k4
-        r4 = r + dt * dr3
-        v4 = v + dt * dv3
-        dr4, dv4 = deriv(r4, v4)
-
-        r_new = r + (dt / 6.0) * (dr1 + 2.0 * dr2 + 2.0 * dr3 + dr4)
-        v_new = v + (dt / 6.0) * (dv1 + 2.0 * dv2 + 2.0 * dv3 + dv4)
-
-        return r_new, v_new
-
-    def _compute_acceleration(
-        self,
-        r: torch.Tensor,
-        v: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Compute total gravitational + perturbation acceleration.
-
-        Args:
-            r: (3,) position ECI [m].
-            v: (3,) velocity ECI [m/s].
-
-        Returns:
-            (3,) total acceleration in ECI [m/s^2].
-        """
-        r_mag = torch.norm(r)
-
-        # Two-body acceleration
-        a_twobody = -MU_EARTH / r_mag ** 3 * r
-
-        a_total = a_twobody
-
-        # Zonal harmonics
-        if self.use_j2 and self.max_degree >= 2:
-            a_total = a_total + zonal_acceleration(r, max_degree=self.max_degree)
-
-        # Atmospheric drag
-        if self.use_drag:
-            a_total = a_total + drag_acceleration(
-                r, v, cd=self.cd, area_mass=self.area_mass,
-            )
-
-        return a_total
 
     def _get_obs(self) -> np.ndarray:
         """

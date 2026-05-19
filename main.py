@@ -132,6 +132,7 @@ async def run_simulation(config: dict):
             server = StreamingServer(
                 video_port=stream_cfg.get("video_port", 9100),
                 telemetry_port=stream_cfg.get("telemetry_port", 9101),
+                jpeg_quality=stream_cfg.get("jpeg_quality", 85),
             )
             await server.start()
             print(f"Streaming server started on ports {stream_cfg.get('video_port', 9100)}/{stream_cfg.get('telemetry_port', 9101)}")
@@ -168,7 +169,7 @@ async def run_simulation(config: dict):
             # Run propagation steps (yield to event loop between steps
             # so asyncio can process new client connections)
             for _ in range(steps_per_frame):
-                state, _ = propagator.propagate(state, env_dt)
+                state, _ = propagator.propagate(state, env_dt, t0=sim_time)
                 sim_time += env_dt
                 step_count += 1
                 trail.append(state[:3].numpy().copy())

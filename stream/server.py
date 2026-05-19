@@ -20,9 +20,11 @@ class StreamingServer:
     """Broadcasts video frames and telemetry to connected TCP clients."""
 
     def __init__(self, video_port: int = 9100,
-                 telemetry_port: int = 9101) -> None:
+                 telemetry_port: int = 9101,
+                 jpeg_quality: int = 85) -> None:
         self._video_port = video_port
         self._telemetry_port = telemetry_port
+        self._jpeg_quality = jpeg_quality
 
         self._video_clients: List[asyncio.StreamWriter] = []
         self._telemetry_clients: List[asyncio.StreamWriter] = []
@@ -94,7 +96,8 @@ class StreamingServer:
                                sim_time: float) -> None:
         if not self._video_clients:
             return
-        data = encode_video_frame(rgb_array, seq, sim_time)
+        data = encode_video_frame(rgb_array, seq, sim_time,
+                                  quality=self._jpeg_quality)
         await self._broadcast(data, self._video_clients)
 
     async def send_telemetry(self, telemetry_dict: dict, seq: int,

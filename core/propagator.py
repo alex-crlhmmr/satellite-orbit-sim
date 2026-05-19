@@ -184,6 +184,7 @@ class Propagator:
         self,
         state: torch.Tensor,
         duration: float,
+        t0: float = 0.0,
     ) -> tuple:
         """
         Propagate the state for a given duration.
@@ -191,6 +192,12 @@ class Propagator:
         Args:
             state: (6,) or (B, 6) initial state vector [m, m/s]
             duration: propagation duration [s]
+            t0: absolute time since epoch at the start of this call [s].
+                Time-dependent forces (SRP, Sun/Moon third-body) evaluate
+                their ephemerides at epoch_jd + (t0 + elapsed)/86400, so
+                callers that propagate in chunks MUST pass the running
+                simulation time here — otherwise the Sun and Moon stay
+                frozen at epoch for the entire run.
 
         Returns:
             (final_state, trajectory): final_state has same shape as input,
@@ -200,7 +207,7 @@ class Propagator:
         state = state.to(device=self.device, dtype=self.dtype)
         trajectory = [state.clone()]
 
-        t = 0.0
+        t = t0
         n_steps = int(duration / self.dt)
         remainder = duration - n_steps * self.dt
 
