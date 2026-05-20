@@ -57,8 +57,9 @@ render:
 # Streaming settings
 stream:
   enabled: true
-  video_port: 9100
-  telemetry_port: 9101
+  video_port: 9100                # binary TCP video (legacy viewer.py)
+  telemetry_port: 9101            # binary TCP telemetry (legacy viewer.py)
+  http_port: 8080                 # browser viewer: http://localhost:8080
   jpeg_quality: 85
 
 # Simulation mode

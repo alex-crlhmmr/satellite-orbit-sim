@@ -132,10 +132,14 @@ async def run_simulation(config: dict):
             server = StreamingServer(
                 video_port=stream_cfg.get("video_port", 9100),
                 telemetry_port=stream_cfg.get("telemetry_port", 9101),
+                http_port=stream_cfg.get("http_port", 8080),
                 jpeg_quality=stream_cfg.get("jpeg_quality", 85),
             )
             await server.start()
-            print(f"Streaming server started on ports {stream_cfg.get('video_port', 9100)}/{stream_cfg.get('telemetry_port', 9101)}")
+            vp = stream_cfg.get("video_port", 9100)
+            tp = stream_cfg.get("telemetry_port", 9101)
+            hp = stream_cfg.get("http_port", 8080)
+            print(f"Streaming server started: binary {vp}/{tp}, http {hp}  (browser: http://localhost:{hp})")
         except Exception as e:
             print(f"Streaming server init failed (continuing without streaming): {e}")
 

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Orbital Simulation</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    color: #00ff88;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    height: 100%;
+    overflow: hidden;
+  }
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stage img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    image-rendering: auto;
+  }
+  .hud {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(0, 255, 136, 0.35);
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.55;
+    pointer-events: none;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  }
+  .hud .row { white-space: pre; }
+  .conn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(0, 255, 136, 0.35);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .conn.off { color: #ff5566; border-color: rgba(255,85,102,0.45); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <img id="video" src="/video.mjpg" alt="orbital video stream" />
+  <div class="hud" id="hud">connecting…</div>
+  <div class="conn off" id="conn">telemetry: off</div>
+</div>
+<script>
+  const hud  = document.getElementById("hud");
+  const conn = document.getElementById("conn");
+
+  function fmt(v, digits = 1) {
+    return (typeof v === "number") ? v.toFixed(digits) : "—";
+  }
+
+  function render(t) {
+    const lines = [
+      `t      ${fmt(t.sim_time_s, 0)} s  (${fmt(t.sim_time_s/3600, 2)} h)`,
+      `alt    ${fmt(t.altitude_km, 2)} km`,
+      `SMA    ${fmt(t.semi_major_axis_km, 2)} km`,
+      `ecc    ${fmt(t.eccentricity, 6)}`,
+      `inc    ${fmt(t.inclination_deg, 3)} deg`,
+      `RAAN   ${fmt(t.raan_deg, 3)} deg`,
+      `speed  ${fmt(t.speed_ms, 1)} m/s`,
+    ];
+    hud.innerHTML = lines.map(l => `<div class="row">${l}</div>`).join("");
+  }
+
+  const es = new EventSource("/telemetry.sse");
+  es.onopen    = () => { conn.textContent = "telemetry: live"; conn.classList.remove("off"); };
+  es.onerror   = () => { conn.textContent = "telemetry: reconnecting"; conn.classList.add("off"); };
+  es.onmessage = (e) => {
+    try { render(JSON.parse(e.data)); } catch (_) {}
+  };
+</script>
+</body>
+</html>
