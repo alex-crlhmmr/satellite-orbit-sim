@@ -5,3 +5,4 @@ moderngl>=5.8.0
 Pillow>=10.0.0
 PyYAML>=6.0
 opencv-python>=4.8.0
+pymsis>=0.10
