@@ -1,149 +1,114 @@
 """
 Exponential atmosphere drag model with 28 altitude bands (US Standard 1976).
 
-Provides atmospheric density lookup and drag acceleration computation
-for satellites in low-Earth orbit. All tensors use float64.
+Internal hot path is pure NumPy float64. ``atmospheric_density`` accepts
+torch tensors for backward compatibility with the test suite.
 """
 
+import numpy as np
 import torch
-import math
 
 from .constants import ATMOSPHERE_BANDS, OMEGA_EARTH, R_EARTH, MU_EARTH
 
 
-# Pre-compute band boundaries as plain lists for fast lookup.
-# Each entry: (base_alt_m, base_density, scale_height_m)
-_BAND_BASE_ALT_M = []
-_BAND_BASE_DENSITY = []
-_BAND_SCALE_HEIGHT_M = []
-
-for _alt_km, _rho, _H_km in ATMOSPHERE_BANDS:
-    _BAND_BASE_ALT_M.append(_alt_km * 1000.0)
-    _BAND_BASE_DENSITY.append(_rho)
-    _BAND_SCALE_HEIGHT_M.append(_H_km * 1000.0)
-
+_BAND_BASE_ALT_M = np.array(
+    [_alt_km * 1000.0 for _alt_km, _, _ in ATMOSPHERE_BANDS],
+    dtype=np.float64,
+)
+_BAND_BASE_DENSITY = np.array(
+    [_rho for _, _rho, _ in ATMOSPHERE_BANDS],
+    dtype=np.float64,
+)
+_BAND_SCALE_HEIGHT_M = np.array(
+    [_H_km * 1000.0 for _, _, _H_km in ATMOSPHERE_BANDS],
+    dtype=np.float64,
+)
 _NUM_BANDS = len(ATMOSPHERE_BANDS)
-_MAX_ALT_M = 1000.0 * 1000.0  # 1000 km upper clamp
+_MAX_ALT_M = 1000.0 * 1000.0
 
 
-def atmospheric_density(altitude_m: torch.Tensor) -> torch.Tensor:
+def _density_scalar(altitude_m: float) -> float:
+    """Scalar fast path — used in the Propagator hot loop."""
+    h = max(0.0, min(_MAX_ALT_M, altitude_m))
+    # searchsorted returns the insertion index; we want the largest base_alt <= h,
+    # so subtract one. Clamp into [0, _NUM_BANDS - 1].
+    idx = int(np.searchsorted(_BAND_BASE_ALT_M, h, side="right")) - 1
+    if idx < 0:
+        idx = 0
+    elif idx >= _NUM_BANDS:
+        idx = _NUM_BANDS - 1
+    h_base = _BAND_BASE_ALT_M[idx]
+    rho_base = _BAND_BASE_DENSITY[idx]
+    H = _BAND_SCALE_HEIGHT_M[idx]
+    return rho_base * np.exp(-(h - h_base) / H)
+
+
+def _density_array(altitude_m: np.ndarray) -> np.ndarray:
+    """Vectorised numpy version for batched altitude arrays."""
+    h = np.clip(altitude_m, 0.0, _MAX_ALT_M)
+    idx = np.searchsorted(_BAND_BASE_ALT_M, h, side="right") - 1
+    idx = np.clip(idx, 0, _NUM_BANDS - 1)
+    h_base = _BAND_BASE_ALT_M[idx]
+    rho_base = _BAND_BASE_DENSITY[idx]
+    H = _BAND_SCALE_HEIGHT_M[idx]
+    return rho_base * np.exp(-(h - h_base) / H)
+
+
+def atmospheric_density(altitude_m):
     """
     Compute atmospheric density using the 28-band US Standard 1976 model.
 
-    Parameters
-    ----------
-    altitude_m : torch.Tensor
-        Geometric altitude in meters. Arbitrary shape (scalar or batched).
-
-    Returns
-    -------
-    torch.Tensor
-        Density in kg/m^3, same shape as input.
+    Accepts either a torch.Tensor or numpy.ndarray (or scalar). Returns
+    the same type as the input. The Propagator hot path goes through
+    the internal _density_scalar/_density_array helpers directly.
     """
-    altitude_m = altitude_m.to(torch.float64)
-    # Clamp altitude to valid range [0, 1000 km]
-    h = altitude_m.clamp(min=0.0, max=_MAX_ALT_M)
-
-    # Build tensors from the band data for vectorised lookup
-    base_alts = torch.tensor(_BAND_BASE_ALT_M, dtype=torch.float64,
-                             device=altitude_m.device)       # (_NUM_BANDS,)
-    base_densities = torch.tensor(_BAND_BASE_DENSITY, dtype=torch.float64,
-                                  device=altitude_m.device)  # (_NUM_BANDS,)
-    scale_heights = torch.tensor(_BAND_SCALE_HEIGHT_M, dtype=torch.float64,
-                                 device=altitude_m.device)   # (_NUM_BANDS,)
-
-    # For each altitude value find the band index: largest base_alt <= h.
-    # h_flat: (N,), base_alts: (B,) -> compare (N, B)
-    orig_shape = h.shape
-    h_flat = h.reshape(-1)  # (N,)
-
-    # (N, _NUM_BANDS): True where base_alt <= h
-    mask = h_flat.unsqueeze(-1) >= base_alts.unsqueeze(0)  # (N, NUM_BANDS)
-
-    # Sum along band axis gives count of bands with base_alt <= h;
-    # subtract 1 to get index of the highest qualifying band.
-    band_idx = mask.sum(dim=-1) - 1  # (N,)
-    band_idx = band_idx.clamp(min=0, max=_NUM_BANDS - 1)
-
-    h_base = base_alts[band_idx]          # (N,)
-    rho_base = base_densities[band_idx]   # (N,)
-    H = scale_heights[band_idx]           # (N,)
-
-    rho = rho_base * torch.exp(-(h_flat - h_base) / H)
-
-    return rho.reshape(orig_shape)
+    if isinstance(altitude_m, torch.Tensor):
+        alt_np = altitude_m.detach().cpu().numpy().astype(np.float64, copy=False)
+        if alt_np.ndim == 0:
+            rho = np.float64(_density_scalar(float(alt_np)))
+        else:
+            rho = _density_array(alt_np)
+        return torch.from_numpy(np.asarray(rho)).to(
+            device=altitude_m.device, dtype=torch.float64
+        ).reshape(altitude_m.shape)
+    arr = np.asarray(altitude_m, dtype=np.float64)
+    if arr.ndim == 0:
+        return _density_scalar(float(arr))
+    return _density_array(arr)
 
 
 def drag_acceleration(
-    r: torch.Tensor,
-    v: torch.Tensor,
+    r: np.ndarray,
+    v: np.ndarray,
     cd: float,
     area_mass: float,
     mu: float = MU_EARTH,
     re: float = R_EARTH,
     omega: float = OMEGA_EARTH,
-) -> torch.Tensor:
+) -> np.ndarray:
     """
-    Compute atmospheric drag acceleration in the ECI frame.
+    Atmospheric drag acceleration in ECI [m/s²].
 
-    Parameters
-    ----------
-    r : torch.Tensor
-        Position vector in ECI [m]. Shape (3,) or (B, 3).
-    v : torch.Tensor
-        Velocity vector in ECI [m/s]. Shape (3,) or (B, 3).
-    cd : float
-        Drag coefficient (dimensionless).
-    area_mass : float
-        Area-to-mass ratio [m^2/kg].
-    mu : float
-        Gravitational parameter [m^3/s^2] (unused, kept for API compat).
-    re : float
-        Earth equatorial radius [m].
-    omega : float
-        Earth rotation rate [rad/s].
-
-    Returns
-    -------
-    torch.Tensor
-        Drag acceleration in ECI [m/s^2], same shape as r.
+    Supports both single (3,) and batched (B, 3) numpy arrays.
     """
-    r = r.to(torch.float64)
-    v = v.to(torch.float64)
+    if r.ndim == 1:
+        # Scalar fast path
+        r_mag = np.sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2])
+        rho = _density_scalar(r_mag - re)
+        # v_rel = v - omega x r, omega = [0, 0, omega]
+        vrel0 = v[0] + omega * r[1]
+        vrel1 = v[1] - omega * r[0]
+        vrel2 = v[2]
+        vrel_mag = np.sqrt(vrel0 * vrel0 + vrel1 * vrel1 + vrel2 * vrel2)
+        k = -0.5 * rho * cd * area_mass * vrel_mag
+        return np.array([k * vrel0, k * vrel1, k * vrel2], dtype=np.float64)
 
-    single = r.dim() == 1
-    if single:
-        r = r.unsqueeze(0)  # (1, 3)
-        v = v.unsqueeze(0)
-
-    # Altitude = |r| - R_Earth
-    r_mag = torch.norm(r, dim=-1)  # (B,)
-    altitude = r_mag - re          # (B,)
-
-    # Atmospheric density
-    rho = atmospheric_density(altitude)  # (B,)
-
-    # Relative velocity: subtract Earth rotation contribution.
-    # omega_vec = [0, 0, omega]  =>  omega x r = [-omega*ry, omega*rx, 0]
-    omega_cross_r = torch.zeros_like(r)
+    # Batched
+    r_mag = np.linalg.norm(r, axis=-1)
+    rho = _density_array(r_mag - re)
+    omega_cross_r = np.zeros_like(r)
     omega_cross_r[..., 0] = -omega * r[..., 1]
-    omega_cross_r[..., 1] =  omega * r[..., 0]
-    # z-component is zero
-
-    v_rel = v - omega_cross_r  # (B, 3)
-    v_rel_mag = torch.norm(v_rel, dim=-1, keepdim=True)  # (B, 1)
-
-    # Drag acceleration: a = -0.5 * rho * Cd * (A/m) * |v_rel| * v_rel
-    a_drag = (
-        -0.5
-        * rho.unsqueeze(-1)        # (B, 1)
-        * cd
-        * area_mass
-        * v_rel_mag                 # (B, 1)
-        * v_rel                     # (B, 3)
-    )
-
-    if single:
-        a_drag = a_drag.squeeze(0)
-
-    return a_drag
+    omega_cross_r[..., 1] = omega * r[..., 0]
+    v_rel = v - omega_cross_r
+    v_rel_mag = np.linalg.norm(v_rel, axis=-1, keepdims=True)
+    return (-0.5 * cd * area_mass) * rho[..., None] * v_rel_mag * v_rel
