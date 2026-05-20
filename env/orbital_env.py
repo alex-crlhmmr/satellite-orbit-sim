@@ -293,6 +293,7 @@ class OrbitalEnv(gym.Env):
             "cr": self.cr,
             "enable_third_body": prop["enable_third_body"],
             "epoch_jd": self.epoch_jd,
+            "atmosphere": cfg.get("atmosphere", {}),
             "device": "cpu",
             "dtype": torch.float64,
         }

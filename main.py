@@ -63,6 +63,7 @@ def build_propagator(config: dict, epoch_jd: float) -> Propagator:
         "cr": sat["reflectivity_coefficient"],
         "enable_third_body": prop["enable_third_body"],
         "epoch_jd": epoch_jd,
+        "atmosphere": config.get("atmosphere", {}),
         "device": "cpu",
         "dtype": torch.float64,
     }

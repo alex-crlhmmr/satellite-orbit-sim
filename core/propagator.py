@@ -54,11 +54,15 @@ class Propagator:
 
         self._drag_module = None
         self._srp_module = None
+        self._atmosphere = None
 
         if self.enable_drag:
             try:
                 from . import atmosphere as _atm
                 self._drag_module = _atm
+                self._atmosphere = _atm.make_atmosphere(
+                    config.get("atmosphere", {})
+                )
             except ImportError:
                 self.enable_drag = False
 
@@ -108,8 +112,10 @@ class Propagator:
             )
 
         if self.enable_drag and self._drag_module is not None:
+            jd = self.epoch_jd + t / SECONDS_PER_DAY
             a_total += self._drag_module.drag_acceleration(
                 r, v, self.cd, self.area_mass,
+                atmosphere=self._atmosphere, jd=jd,
             )
 
         if self.enable_srp and self._srp_module is not None:

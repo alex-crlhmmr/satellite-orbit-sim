@@ -26,6 +26,13 @@ propagator:
   enable_srp: true
   enable_third_body: true
 
+# Atmosphere model (used by drag)
+atmosphere:
+  model: nrlmsise2                # 'nrlmsise2' (MSIS 2.x via pymsis) or 'ussa76' (legacy)
+  f107: 150.0                     # daily 10.7cm solar radio flux [sfu] (typical 70-300)
+  f107a: 150.0                    # 81-day-centred average F10.7 [sfu]
+  ap: 4.0                         # geomagnetic Ap index (quiet ~4, storm 50+)
+
 # Epoch (J2000 + offset)
 epoch:
   year: 2024
