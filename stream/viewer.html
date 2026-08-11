@@ -146,7 +146,9 @@
     ws.onopen = async () => {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      ws.send(JSON.stringify({type: "offer", sdp: offer.sdp}));
+      ws.send(JSON.stringify({
+        type: "offer", sdp: offer.sdp, userAgent: navigator.userAgent
+      }));
     };
     const statsTimer = setInterval(async () => {
       if (ws.readyState !== WebSocket.OPEN) return;

@@ -129,7 +129,8 @@ class WebRTCServer:
             "videoconvert ! video/x-raw,format=RGBA ! nvvidconv ! "
             "video/x-raw(memory:NVMM),format=NV12 ! "
             f"nvv4l2h264enc bitrate={self.bitrate} control-rate=1 "
-            f"iframeinterval={self.fps} insert-sps-pps=true ! "
+            f"iframeinterval={self.fps} idrinterval={self.fps} "
+            "insert-sps-pps=true insert-aud=true ! "
             "h264parse config-interval=-1 ! "
             "video/x-h264,profile=constrained-baseline,"
             "stream-format=byte-stream,alignment=au ! "
@@ -186,7 +187,10 @@ class WebRTCServer:
             async for raw in websocket:
                 message = json.loads(raw)
                 if message.get("type") == "offer":
-                    print("  [webrtc] SDP offer received")
+                    print(
+                        "  [webrtc] SDP offer received from "
+                        f"{message.get('userAgent', 'unknown browser')}"
+                    )
                     self._set_offer(peer, message["sdp"])
                 elif message.get("type") == "ice":
                     peer.webrtc.emit(
@@ -194,7 +198,7 @@ class WebRTCServer:
                         message["candidate"],
                     )
                 elif message.get("type") == "client-stats":
-                    logger.info("WebRTC browser stats: %s", message.get("stats", {}))
+                    print(f"  [webrtc] browser stats: {message.get('stats', {})}")
         finally:
             self._peer_by_id.pop(peer_id, None)
             self._close_peer(peer)
