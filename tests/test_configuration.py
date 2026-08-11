@@ -6,7 +6,7 @@ import pytest
 
 from core.high_fidelity import HighFidelityPropagator
 from core.propagator import Propagator
-from main import build_propagator, load_config
+from main import build_argument_parser, build_propagator, load_config
 
 
 def test_default_selects_high_fidelity_backend():
@@ -23,6 +23,32 @@ def test_legacy_backend_uses_legacy_schema():
     propagator = build_propagator(config, 2460390.0)
     assert isinstance(propagator, Propagator)
     assert propagator.enable_drag is False
+
+
+def test_minimal_config_override_inherits_defaults(tmp_path):
+    override = tmp_path / "legacy.yaml"
+    override.write_text("propagator:\n  backend: legacy\n", encoding="utf-8")
+
+    config = load_config(override)
+
+    assert config["propagator"]["backend"] == "legacy"
+    assert config["propagator"]["dt"] == 10.0
+    assert config["satellite"]["mass_kg"] == 100.0
+
+
+def test_config_root_must_be_mapping(tmp_path):
+    override = tmp_path / "invalid.yaml"
+    override.write_text("- not\n- a\n- mapping\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="root must be a mapping"):
+        load_config(override)
+
+
+def test_backend_cli_override_is_constrained():
+    parser = build_argument_parser()
+    assert parser.parse_args(["--backend", "legacy"]).backend == "legacy"
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--backend", "unknown"])
 
 
 def test_high_fidelity_rejects_unsupported_geometry():

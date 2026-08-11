@@ -31,7 +31,7 @@ separated and unsupported high-fidelity keys fail loudly.
   [validation/real_data/](validation/real_data/README.md)
 - GRACE-FO accelerometer-density benchmark with an untouched storm test:
   [validation/density/](validation/density/README.md)
-- 71 tests covering physics, configuration, streaming, uncertainty and data
+- 74 tests covering physics, configuration, streaming, uncertainty and data
   protocols
 
 On the frozen GRACE-FO October storm interval, raw NRLMSISE-00 density MAPE is
@@ -106,6 +106,8 @@ Useful commands:
 ```bash
 python main.py --steps 5000
 python main.py --no-render --no-stream --steps 1440
+satellite-orbit-sim --backend legacy
+satellite-orbit-sim --config config/legacy.yaml
 python main.py --camera tracking
 python main.py --camera fixed
 python main.py --camera split
@@ -120,7 +122,10 @@ satellite-orbit-viewer --host HOST_IP --headless --save-telemetry
 
 ## Configuration
 
-The default file is [config/default.yaml](config/default.yaml). Major sections:
+The default file is [config/default.yaml](config/default.yaml). `--config`
+accepts a minimal YAML override and recursively merges it onto those defaults;
+[`config/legacy.yaml`](config/legacy.yaml) is the backend-switching example.
+Major sections:
 
 - `orbit`: initial osculating Keplerian elements
 - `satellite`: mass, coefficients, drag area and illuminated area

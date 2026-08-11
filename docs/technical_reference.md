@@ -116,6 +116,14 @@ Backend-specific keys are not interchangeable. The top-level `atmosphere`
 section belongs to the legacy backend; Brahe owns the default backend's
 NRLMSISE-00 and space-weather implementation.
 
+Select the common backend override directly, or merge a minimal YAML override
+onto the canonical defaults:
+
+```bash
+satellite-orbit-sim --backend legacy
+satellite-orbit-sim --config config/legacy.yaml
+```
+
 ## Rendering and cameras
 
 The renderer uses moderngl with an EGL standalone context and an off-screen RGB
