@@ -93,7 +93,11 @@ class Camera:
         if abs(np.dot(radial_unit, up)) > 0.95:
             up = np.array([0.0, 1.0, 0.0])
 
-        self.look_at(sat_pos, earth_center, up)
+        # Keep the camera just outside the spacecraft position.  Placing it
+        # exactly on the satellite also places the point sprite and trail on
+        # the eye/near plane, which can produce an empty viewport on EGL.
+        eye = sat_pos + radial_unit * 100_000.0
+        self.look_at(eye, earth_center, up)
 
     def onboard_horizon(self, sat_pos, sat_velocity=None,
                         earth_center=(0, 0, 0)):

@@ -26,7 +26,7 @@ class Renderer:
             width: Framebuffer width in pixels.
             height: Framebuffer height in pixels.
             config: Optional dict with configuration overrides.  Recognised
-                keys include ``day_texture``, ``night_texture``.
+                keys include ``earth_day_texture``, ``earth_night_texture``.
         """
         self.width = width
         self.height = height
@@ -56,11 +56,11 @@ class Renderer:
 
         # Load Earth textures (graceful fallback to procedural)
         day_path = self.config.get(
-            "day_texture",
+            "earth_day_texture",
             os.path.join(os.path.dirname(_SHADER_DIR), "..", "assets", "earth_day.jpg"),
         )
         night_path = self.config.get(
-            "night_texture",
+            "earth_night_texture",
             os.path.join(os.path.dirname(_SHADER_DIR), "..", "assets", "earth_night.jpg"),
         )
         self.earth.load_textures(self.ctx, day_path, night_path)
@@ -105,13 +105,15 @@ class Renderer:
         """
         self.camera_mode = mode
 
-    def _render_scene(self, sat_positions, sun_dir, gmst, trail_positions, vp):
+    def _render_scene(self, sat_positions, sun_dir, gmst, trail_positions, vp,
+                      show_orbit=True):
         """Draw the full scene (Earth + trail + satellites) with a given VP matrix."""
-        self._draw_earth(gmst, sun_dir, vp)
-        if trail_positions is not None:
+        self._draw_earth(gmst, sun_dir, vp, self.camera._eye)
+        if show_orbit and trail_positions is not None:
             self._draw_trail(trail_positions, vp)
-        for pos in sat_positions:
-            self._draw_satellite(pos, vp)
+        if show_orbit:
+            for pos in sat_positions:
+                self._draw_satellite(pos, vp)
 
     def render_frame(self, sat_positions, sun_pos, gmst: float,
                      trail_positions=None, sat_velocity=None) -> np.ndarray:
@@ -155,7 +157,10 @@ class Renderer:
                 self.camera.onboard_nadir(sat_positions[0])
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
-            self._render_scene(sat_positions, sun_dir, gmst, trail_positions, vp)
+            self._render_scene(
+                sat_positions, sun_dir, gmst, trail_positions, vp,
+                show_orbit=(mode == 'split'),
+            )
 
             # --- Right half ---
             self.ctx.viewport = (half_w, 0, self.width - half_w, self.height)
@@ -165,7 +170,10 @@ class Renderer:
                 self.camera.onboard_horizon(sat_positions[0], sat_velocity)
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
-            self._render_scene(sat_positions, sun_dir, gmst, trail_positions, vp)
+            self._render_scene(
+                sat_positions, sun_dir, gmst, trail_positions, vp,
+                show_orbit=(mode == 'split'),
+            )
 
             # Restore
             self.camera.aspect = old_aspect
@@ -200,10 +208,10 @@ class Renderer:
     # Internal draw helpers
     # ------------------------------------------------------------------
 
-    def _draw_earth(self, gmst: float, sun_dir, vp: np.ndarray):
+    def _draw_earth(self, gmst: float, sun_dir, vp: np.ndarray, camera_pos):
         """Render the Earth sphere."""
         model = Earth.get_model_matrix(gmst)
-        self.earth.render(self.earth_prog, vp, model, sun_dir)
+        self.earth.render(self.earth_prog, vp, model, sun_dir, camera_pos)
 
     def _draw_trail(self, trail_positions, vp: np.ndarray):
         """Render the orbit trail as a fading line strip."""

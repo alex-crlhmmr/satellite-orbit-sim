@@ -176,7 +176,7 @@ class Earth:
     # ------------------------------------------------------------------
 
     def render(self, prog, vp_matrix: np.ndarray, model_matrix: np.ndarray,
-               sun_dir):
+               sun_dir, camera_pos):
         """Render the Earth sphere.
 
         Args:
@@ -184,6 +184,7 @@ class Earth:
             vp_matrix: 4x4 view-projection matrix (column-major float32).
             model_matrix: 4x4 model matrix (column-major float32).
             sun_dir: Normalised sun direction in world space (3-element).
+            camera_pos: Camera position in world coordinates (3-element).
         """
         mvp = vp_matrix @ model_matrix
 
@@ -192,6 +193,8 @@ class Earth:
 
         sun_dir = np.asarray(sun_dir, dtype=np.float32)
         prog["sun_direction"].value = tuple(sun_dir)
+        camera_pos = np.asarray(camera_pos, dtype=np.float32)
+        prog["camera_position"].value = tuple(camera_pos)
 
         if self.day_texture is not None:
             self.day_texture.use(location=0)

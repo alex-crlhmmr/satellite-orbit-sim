@@ -2,7 +2,9 @@
 Orbital Simulation — Main Entry Point
 
 Runs the simulation loop: propagate orbit, render frames, stream video + telemetry.
-Supports free propagation and RL agent modes.
+
+The reinforcement-learning environment is experimental and is not wired into
+this entry point.
 """
 
 import asyncio
@@ -131,6 +133,7 @@ async def run_simulation(config: dict):
         try:
             from stream.server import StreamingServer
             server = StreamingServer(
+                bind_host=stream_cfg.get("bind_host", "0.0.0.0"),
                 video_port=stream_cfg.get("video_port", 9100),
                 telemetry_port=stream_cfg.get("telemetry_port", 9101),
                 http_port=stream_cfg.get("http_port", 8080),
@@ -142,6 +145,7 @@ async def run_simulation(config: dict):
             hp = stream_cfg.get("http_port", 8080)
             print(f"Streaming server started: binary {vp}/{tp}, http {hp}  (browser: http://localhost:{hp})")
         except Exception as e:
+            server = None
             print(f"Streaming server init failed (continuing without streaming): {e}")
 
     # Trail buffer
@@ -188,7 +192,8 @@ async def run_simulation(config: dict):
                 if altitude < 100e3:
                     break
 
-            # Render and stream
+            # Render a video frame when EGL is available.
+            frame = None
             if renderer is not None:
                 gmst = gmst_from_seconds(epoch_jd, sim_time)
                 sun_pos = sun_position_eci(epoch_jd + sim_time / 86400.0)
@@ -202,13 +207,16 @@ async def run_simulation(config: dict):
                     sat_velocity=state[3:6].numpy(),
                 )
 
-                if server is not None:
-                    telemetry = build_telemetry(state, sim_time, epoch_jd)
+            # Telemetry is physics-only and remains available in no-render mode
+            # or when renderer initialisation fails.
+            if server is not None:
+                telemetry = build_telemetry(state, sim_time, epoch_jd)
+                if frame is not None:
                     await server.send_video_frame(
                         frame, seq, sim_time,
                     )
-                    await server.send_telemetry(telemetry, seq, sim_time)
-                    seq += 1
+                await server.send_telemetry(telemetry, seq, sim_time)
+                seq += 1
 
             # Print status periodically
             if step_count % 100 == 0:
@@ -279,7 +287,12 @@ def main():
     if args.steps is not None:
         config.setdefault("environment", {})["max_steps"] = args.steps
 
-    asyncio.run(run_simulation(config))
+    try:
+        asyncio.run(run_simulation(config))
+    except KeyboardInterrupt:
+        # asyncio.run() cancels the main task before re-raising Ctrl+C, so the
+        # coroutine-local handler cannot reliably suppress this traceback.
+        print("\nSimulation stopped by user")
 
 
 if __name__ == "__main__":

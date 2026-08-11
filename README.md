@@ -8,19 +8,18 @@ High-fidelity LEO satellite orbital simulation with real-time 3D rendering and T
 
 ## Features
 
-- **High-fidelity orbital mechanics** — J2-J6 zonal harmonics, atmospheric drag (US Standard 1976), solar radiation pressure with cylindrical shadow, Sun/Moon third-body perturbations
+- **High-fidelity orbital mechanics** — J2-J6 zonal harmonics, NRLMSISE-2 atmospheric drag (with a USSA76 fallback), solar radiation pressure with cylindrical shadow, Sun/Moon third-body perturbations
 - **RK4 propagator** — Fixed-step integration in float64 with individually togglable force models
 - **3D headless rendering** — Earth with NASA Blue Marble day/night textures, orbit trail, satellite marker via moderngl + EGL (no display server needed)
 - **Real-time streaming** — TCP server broadcasts JPEG video frames and JSON telemetry to connected clients
 - **Remote viewer** — OpenCV-based client with telemetry overlay, frame capture, and headless recording mode
-- **RL environment** — Gymnasium-compatible env with relative orbital element (ROE) observations and continuous RTN thrust actions
 - **Multiple camera modes** — Tracking (follows satellite), fixed inertial, or split-screen (both)
 
 ## Architecture
 
 ```
 core/           Physics engine (gravity, drag, SRP, third-body, propagator)
-env/            Gymnasium RL environment and reward functions
+env/            Experimental RL code (not part of the supported entry point)
 render/         moderngl/EGL 3D renderer with GLSL shaders
 stream/         TCP streaming server and protocol
 config/         YAML configuration
@@ -39,11 +38,17 @@ pip install -r requirements.txt
 python main.py
 ```
 
-This starts the simulation with default config (ISS-like orbit at 400 km, 51.6° inclination) and begins streaming on ports 9100 (video) and 9101 (telemetry).
+This starts the simulation with default config (ISS-like orbit at 400 km, 51.6° inclination). It exposes binary video on 9100, binary telemetry on 9101, and a browser viewer on 8080.
 
 ### Remote Viewing
 
-From another machine on the network:
+The simplest remote viewer needs only a browser:
+
+```text
+http://<JETSON_IP>:8080
+```
+
+Alternatively, install the Python dependencies on the remote machine and run:
 
 ```bash
 python viewer.py --host <JETSON_IP>
@@ -52,7 +57,8 @@ python viewer.py --host <JETSON_IP>
 If ports are firewalled, use SSH tunneling:
 
 ```bash
-ssh -L 9100:localhost:9100 -L 9101:localhost:9101 user@<JETSON_IP>
+ssh -L 8080:localhost:8080 -L 9100:localhost:9100 -L 9101:localhost:9101 user@<JETSON_IP>
+# Browser: http://localhost:8080
 python viewer.py --host localhost
 ```
 
@@ -77,7 +83,7 @@ python viewer.py --host localhost --save-telemetry     # Record telemetry to JSO
 | Model | Implementation | Reference |
 |-------|---------------|-----------|
 | Gravity | J2-J6 zonal harmonics, closed-form Cartesian | Vallado, *Fundamentals of Astrodynamics* |
-| Drag | 28-band exponential atmosphere (US Std 1976) | Vallado Table 8-4 |
+| Drag | NRLMSISE-2 via pymsis; optional 28-band USSA76 fallback | NRLMSISE-2 / Vallado Table 8-4 |
 | SRP | Solar radiation pressure + cylindrical shadow | Montenbruck & Gill |
 | Third-body | Sun (Meeus) + Moon (Brown's theory) | Meeus, *Astronomical Algorithms* |
 | Integrator | RK4 fixed-step, dt=10s, float64 | — |
@@ -104,28 +110,13 @@ All parameters are set in `config/default.yaml`:
 - **Satellite** — Mass, drag coefficient, reflectivity, area-to-mass ratio, max thrust
 - **Propagator** — Timestep, enable/disable individual perturbations, max J degree
 - **Render** — Resolution, FPS, camera mode, trail length, texture paths
-- **Stream** — Video/telemetry ports, JPEG quality
-- **Environment** — Step duration, max steps, reward type, fuel penalty
+- **Stream** — Bind address, browser/video/telemetry ports, JPEG quality
+- **Environment** — Simulation step duration and maximum steps
 
-## RL Environment
+## RL Status
 
-The Gymnasium environment (`env/orbital_env.py`) supports station-keeping, orbit-raising, and deorbit tasks:
-
-```python
-import gymnasium as gym
-from env.orbital_env import OrbitalEnv
-
-env = OrbitalEnv(config)
-obs, info = env.reset()
-
-for _ in range(1000):
-    action = env.action_space.sample()  # RTN thrust [-1, 1]^3
-    obs, reward, terminated, truncated, info = env.step(action)
-```
-
-**Observation space:** Relative orbital elements (6), altitude, orbital period, eclipse flag, normalized time
-
-**Action space:** Continuous thrust in RTN frame, `Box(-1, 1, shape=(3,))`, scaled by `max_thrust_n`
+The `env/` package is experimental and intentionally deferred. It is not
+connected to `main.py` and should not currently be treated as a supported API.
 
 ## Streaming Protocol
 
@@ -147,7 +138,11 @@ Developed and tested on:
 
 ## Dependencies
 
-- PyTorch >= 2.0 (CPU sufficient for single-satellite; CUDA for batch RL)
+- PyTorch >= 2.0 (public tensor API; propagation currently runs on NumPy/CPU)
 - moderngl >= 5.8 (with EGL backend)
 - Gymnasium >= 0.29
-- NumPy, Pillow, PyYAML, OpenCV
+- NumPy, Pillow, PyYAML, pymsis, Gymnasium, OpenCV
+
+The default server binds to `0.0.0.0` so another machine on the LAN can view
+it. The streams have no authentication or TLS; use `bind_host: 127.0.0.1` and
+an SSH tunnel on untrusted networks.

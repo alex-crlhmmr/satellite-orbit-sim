@@ -56,13 +56,29 @@
 </head>
 <body>
 <div class="stage">
-  <img id="video" src="/video.mjpg" alt="orbital video stream" />
+  <img id="video" alt="orbital video stream" />
   <div class="hud" id="hud">connecting…</div>
   <div class="conn off" id="conn">telemetry: off</div>
 </div>
 <script>
   const hud  = document.getElementById("hud");
   const conn = document.getElementById("conn");
+  const video = document.getElementById("video");
+  let videoRetry = null;
+
+  function connectVideo() {
+    // The simulation may restart when its camera mode changes. A cache-busting
+    // URL forces Safari and other browsers to open a fresh MJPEG connection.
+    video.src = `/video.mjpg?t=${Date.now()}`;
+  }
+
+  video.onerror = () => {
+    video.removeAttribute("src");
+    clearTimeout(videoRetry);
+    videoRetry = setTimeout(connectVideo, 750);
+  };
+
+  connectVideo();
 
   function fmt(v, digits = 1) {
     return (typeof v === "number") ? v.toFixed(digits) : "—";

@@ -27,7 +27,7 @@ orbital_simulation/
 │   ├── frames.py            # Reference frame transforms
 │   ├── elements.py          # Orbital element conversions
 │   ├── gravity.py           # Zonal harmonic accelerations
-│   ├── atmosphere.py        # Exponential drag model
+│   ├── atmosphere.py        # NRLMSISE-2 and USSA76 atmosphere models
 │   ├── srp.py               # Solar radiation pressure
 │   ├── third_body.py        # Sun/Moon perturbations
 │   └── propagator.py        # RK4 integrator + force assembly
@@ -240,7 +240,11 @@ where $n = \sqrt{\mu/a^3}$ is the mean motion and $p = a(1-e^2)$.
 
 #### 5.3 Atmospheric Drag
 
-**Density model:** Exponential atmosphere with 28 altitude bands from the US Standard Atmosphere 1976. For altitude $h$ in a band with base altitude $h_0$, base density $\rho_0$, and scale height $H$:
+**Density model:** NRLMSISE-2 through `pymsis` is the configured default and
+uses epoch, position, F10.7, and Ap inputs. A legacy exponential atmosphere
+with 28 altitude bands from the US Standard Atmosphere 1976 remains available
+as `model: ussa76`. For altitude $h$ in a legacy-model band with base altitude
+$h_0$, base density $\rho_0$, and scale height $H$:
 
 $$
 \rho(h) = \rho_0 \exp\left(-\frac{h - h_0}{H}\right)
@@ -326,7 +330,7 @@ $$
 \end{aligned}
 $$
 
-Default timestep: $\Delta t = 10$ s, suitable for LEO where the orbital period is approximately 90 minutes. The method is chosen for its simplicity, numerical stability at this step size, and compatibility with GPU batch parallelism (no adaptive step rejection logic).
+Default timestep: $\Delta t = 10$ s, suitable for LEO where the orbital period is approximately 90 minutes. The fixed-step method is chosen for simplicity and numerical stability at this step size. The current propagator operates on one NumPy CPU state at a time.
 
 #### 6.2 Precision
 
@@ -338,7 +342,9 @@ All propagation is performed in **float64** (double precision). At LEO distances
 
 #### 7.1 Gymnasium Interface
 
-The environment follows the `gymnasium.Env` API and passes `gymnasium.utils.env_checker.check_env`.
+The environment code is experimental and is not currently part of the
+supported `main.py` execution path. Gymnasium compliance is not asserted by
+the current validation suite.
 
 **Observation space:** `Box(shape=(10,), dtype=float32)`
 
@@ -430,7 +436,10 @@ All multi-byte fields are big-endian.
 
 #### 9.2 Server
 
-Two asyncio TCP servers on separate ports (default 9100 for video, 9101 for telemetry). Multiple clients are supported via broadcast. Disconnected clients are detected during write and removed from the subscriber list.
+Three asyncio listeners are used: binary video on 9100, binary telemetry on
+9101, and an HTTP browser viewer on 8080. Multiple clients are supported via
+single-slot latest-value channels, so slow consumers drop stale frames or
+telemetry rather than blocking propagation.
 
 #### 9.3 Remote Viewing
 
@@ -453,7 +462,6 @@ The standalone `viewer.py` client connects via TCP (or SSH tunnel if ports are f
 | ROE (identical) | All elements | $< 10^{-14}$ | $< 10^{-12}$ |
 | Atmospheric density | Sea-level | 1.225 kg/m$^3$ | $\pm 1\%$ |
 | Sun ephemeris | Distance at J2000 | 0.983 AU | $\pm 2\%$ of 1 AU |
-| Gymnasium | `check_env` | Pass | Pass |
 
 ---
 
@@ -522,13 +530,14 @@ python -m pytest tests/test_core.py -v
 
 | Package | Purpose |
 |---------|---------|
-| PyTorch >= 2.0 | Tensor computation, batched propagation |
+| PyTorch >= 2.0 | Public tensor-facing physics API |
 | NumPy >= 1.24 | Array operations, rendering math |
 | Gymnasium >= 0.29 | RL environment interface |
 | moderngl >= 5.8 | OpenGL rendering (EGL backend) |
 | Pillow >= 10.0 | JPEG encoding/decoding |
 | PyYAML >= 6.0 | Configuration loading |
 | OpenCV >= 4.8 | Viewer display (optional) |
+| pymsis >= 0.10 | Default NRLMSISE-2 atmosphere model |
 
 ---
 
@@ -542,4 +551,5 @@ python -m pytest tests/test_core.py -v
 
 ---
 
-*Generated for the orbital_simulation project. All equations implemented in PyTorch with float64 precision.*
+The propagator's hot path uses NumPy float64 on CPU; its public API accepts and
+returns PyTorch tensors.

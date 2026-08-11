@@ -10,9 +10,9 @@ Three concurrent servers run inside one StreamingServer instance:
     GET /video.mjpg    -> multipart/x-mixed-replace MJPEG stream
     GET /telemetry.sse -> Server-Sent Events (JSON)
 
-Every video client (binary or HTTP) gets a single-slot latest-frame
-buffer that drops stale frames if the consumer falls behind. The
-simulation loop is therefore never blocked by a slow viewer.
+Every video and telemetry client gets a single-slot latest-value buffer
+that drops stale data if the consumer falls behind. The simulation loop
+is therefore never blocked by a slow viewer.
 """
 
 import asyncio
@@ -26,7 +26,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 from PIL import Image
 
-from .protocol import encode_telemetry, encode_video_frame
+from .protocol import encode_telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +116,13 @@ class StreamingServer:
 
     def __init__(
         self,
+        bind_host: str = "0.0.0.0",
         video_port: int = 9100,
         telemetry_port: int = 9101,
         http_port: int = 8080,
         jpeg_quality: int = 85,
     ) -> None:
+        self._bind_host = bind_host
         self._video_port = video_port
         self._telemetry_port = telemetry_port
         self._http_port = http_port
@@ -129,7 +131,7 @@ class StreamingServer:
         self._binary_video_channels: List[_FrameChannel] = []
         self._http_video_channels: List[_FrameChannel] = []
 
-        self._binary_telemetry_writers: List[asyncio.StreamWriter] = []
+        self._binary_telemetry_channels: List[_FrameChannel] = []
         self._http_telemetry_channels: List[_FrameChannel] = []
 
         self._servers: List[asyncio.AbstractServer] = []
@@ -143,15 +145,19 @@ class StreamingServer:
     # ----------------------------- lifecycle ------------------------------
 
     async def start(self) -> None:
-        self._servers.append(await asyncio.start_server(
-            self._handle_binary_video, "0.0.0.0", self._video_port
-        ))
-        self._servers.append(await asyncio.start_server(
-            self._handle_binary_telemetry, "0.0.0.0", self._telemetry_port
-        ))
-        self._servers.append(await asyncio.start_server(
-            self._handle_http, "0.0.0.0", self._http_port
-        ))
+        try:
+            self._servers.append(await asyncio.start_server(
+                self._handle_binary_video, self._bind_host, self._video_port
+            ))
+            self._servers.append(await asyncio.start_server(
+                self._handle_binary_telemetry, self._bind_host, self._telemetry_port
+            ))
+            self._servers.append(await asyncio.start_server(
+                self._handle_http, self._bind_host, self._http_port
+            ))
+        except Exception:
+            await self.stop()
+            raise
 
     async def stop(self) -> None:
         for server in self._servers:
@@ -162,17 +168,13 @@ class StreamingServer:
                 pass
         self._servers.clear()
         for ch in (self._binary_video_channels + self._http_video_channels
+                   + self._binary_telemetry_channels
                    + self._http_telemetry_channels):
             ch.closed = True
             ch.event.set()
-        for w in self._binary_telemetry_writers:
-            try:
-                w.close()
-            except Exception:
-                pass
         self._binary_video_channels.clear()
         self._http_video_channels.clear()
-        self._binary_telemetry_writers.clear()
+        self._binary_telemetry_channels.clear()
         self._http_telemetry_channels.clear()
         for t in self._tasks:
             t.cancel()
@@ -213,27 +215,18 @@ class StreamingServer:
     async def send_telemetry(
         self, telemetry_dict: dict, seq: int, sim_time: float
     ) -> None:
-        binary_clients = bool(self._binary_telemetry_writers)
+        binary_clients = bool(self._binary_telemetry_channels)
         http_clients = bool(self._http_telemetry_channels)
         if not (binary_clients or http_clients):
             return
 
         if binary_clients:
             data = encode_telemetry(telemetry_dict, seq, sim_time)
-            dead = []
-            for w in self._binary_telemetry_writers:
-                try:
-                    w.write(data)
-                    await w.drain()
-                except Exception:
-                    dead.append(w)
-            for w in dead:
-                if w in self._binary_telemetry_writers:
-                    self._binary_telemetry_writers.remove(w)
-                try:
-                    w.close()
-                except Exception:
-                    pass
+            for ch in list(self._binary_telemetry_channels):
+                if ch.closed:
+                    self._binary_telemetry_channels.remove(ch)
+                else:
+                    ch.put(data)
 
         if http_clients:
             payload = json.dumps(
@@ -274,21 +267,23 @@ class StreamingServer:
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         addr = writer.get_extra_info("peername")
-        self._binary_telemetry_writers.append(writer)
+        ch = _FrameChannel(writer, lambda b: b, name="bin-telemetry")
+        self._binary_telemetry_channels.append(ch)
         print(f"  [stream] Telemetry client connected: {addr} "
-              f"(binary, total: {len(self._binary_telemetry_writers)})")
+              f"(binary, total: {len(self._binary_telemetry_channels)})")
         try:
+            task = asyncio.create_task(ch.run())
+            self._tasks.append(task)
             await reader.read(-1)
         except Exception:
             pass
         finally:
-            if writer in self._binary_telemetry_writers:
-                self._binary_telemetry_writers.remove(writer)
-            try:
-                writer.close()
-            except Exception:
-                pass
-            print(f"  [stream] Telemetry client disconnected: {addr}")
+            ch.closed = True
+            ch.event.set()
+            if ch in self._binary_telemetry_channels:
+                self._binary_telemetry_channels.remove(ch)
+            print(f"  [stream] Telemetry client disconnected: {addr} "
+                  f"(sent={ch.sent}, dropped={ch.dropped})")
 
     # ------------------------------ HTTP ---------------------------------
 
@@ -458,5 +453,5 @@ class StreamingServer:
 
     def client_count(self) -> Tuple[int, int]:
         v = len(self._binary_video_channels) + len(self._http_video_channels)
-        t = len(self._binary_telemetry_writers) + len(self._http_telemetry_channels)
+        t = len(self._binary_telemetry_channels) + len(self._http_telemetry_channels)
         return v, t
