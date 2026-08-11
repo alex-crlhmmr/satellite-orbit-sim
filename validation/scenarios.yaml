@@ -1,0 +1,43 @@
+epoch: "2024-03-20T12:00:00.000Z"
+sample_interval_s: 3600.0
+horizons_s: [86400.0, 259200.0, 604800.0]
+profiles: [two_body, gravity, third_body, srp_sunlight, srp]
+gravity:
+  degree: 20
+  order: 20
+scenarios:
+  - name: iss_like_leo
+    a_m: 6778137.0
+    e: 0.0001
+    i_deg: 51.6
+    raan_deg: 0.0
+    argp_deg: 0.0
+    nu_deg: 0.0
+  - name: sun_synchronous_leo
+    a_m: 7078137.0
+    e: 0.001
+    i_deg: 98.2
+    raan_deg: 40.0
+    argp_deg: 25.0
+    nu_deg: 10.0
+  - name: eccentric_leo
+    a_m: 7500000.0
+    e: 0.12
+    i_deg: 63.4
+    raan_deg: 120.0
+    argp_deg: 270.0
+    nu_deg: 45.0
+  - name: gps_like_meo
+    a_m: 26560000.0
+    e: 0.01
+    i_deg: 55.0
+    raan_deg: 80.0
+    argp_deg: 15.0
+    nu_deg: 200.0
+  - name: near_geostationary
+    a_m: 42164000.0
+    e: 0.0001
+    i_deg: 0.1
+    raan_deg: 10.0
+    argp_deg: 30.0
+    nu_deg: 50.0

@@ -27,5 +27,8 @@ captured_frames/
 telemetry.jsonl
 *.log
 
+# Validation build outputs
+validation/orekit/target/
+
 # Claude
 .claude/
