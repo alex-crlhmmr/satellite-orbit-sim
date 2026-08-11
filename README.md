@@ -31,7 +31,8 @@ separated and unsupported high-fidelity keys fail loudly.
   [validation/real_data/](validation/real_data/README.md)
 - GRACE-FO accelerometer-density benchmark with an untouched storm test:
   [validation/density/](validation/density/README.md)
-- 74 tests covering physics, configuration, streaming, uncertainty and data
+- 79 tests covering physics, configuration, streaming, visualization geometry,
+  uncertainty and data
   protocols
 
 On the frozen GRACE-FO October storm interval, raw NRLMSISE-00 density MAPE is
@@ -163,6 +164,11 @@ tests/         Unit and evidence-integrity tests
 config/        Runtime configuration
 main.py        Supported simulation entry point
 ```
+
+Earth visualization uses a WGS-84 ellipsoid, full IERS Earth orientation and
+DE440s solar geometry. Bundled NASA surface composites and their time/provenance
+limits are documented in [assets/README.md](assets/README.md). No terrain,
+clouds, weather or star field is fabricated.
 
 ## Scope
 
