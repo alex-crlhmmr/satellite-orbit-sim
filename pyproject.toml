@@ -19,7 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 legacy = ["pymsis>=0.10,<1"]
 render = ["moderngl>=5.8,<6", "Pillow>=10,<13"]
-viewer = ["opencv-python>=4.8,<5"]
+viewer = ["opencv-python>=4.8,<5", "Pillow>=10,<13"]
 rl = ["gymnasium>=0.29,<2"]
 dev = ["pytest>=8,<9", "ruff>=0.12,<1"]
 all = [
@@ -32,14 +32,13 @@ all = [
 
 [project.scripts]
 satellite-orbit-sim = "main:main"
-satellite-orbit-viewer = "viewer:main"
+satellite-orbit-viewer = "stream.viewer_cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["core", "env", "render", "stream"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "main.py" = "main.py"
-"viewer.py" = "viewer.py"
 "config" = "config"
 "assets" = "assets"
 

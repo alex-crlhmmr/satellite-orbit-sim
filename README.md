@@ -31,7 +31,7 @@ separated and unsupported high-fidelity keys fail loudly.
   [validation/real_data/](validation/real_data/README.md)
 - GRACE-FO accelerometer-density benchmark with an untouched storm test:
   [validation/density/](validation/density/README.md)
-- 68 tests covering physics, configuration, streaming, uncertainty and data
+- 71 tests covering physics, configuration, streaming, uncertainty and data
   protocols
 
 On the frozen GRACE-FO October storm interval, raw NRLMSISE-00 density MAPE is
@@ -114,8 +114,8 @@ python main.py --camera nadir
 python main.py --camera horizon
 python main.py --camera onboard
 
-python viewer.py --host HOST_IP
-python viewer.py --host HOST_IP --headless --save-telemetry
+satellite-orbit-viewer --host HOST_IP
+satellite-orbit-viewer --host HOST_IP --headless --save-telemetry
 ```
 
 ## Configuration
@@ -151,13 +151,12 @@ manifests.
 ```text
 core/          Dynamics, atmosphere, aerodynamics and uncertainty
 render/        EGL/moderngl renderer and camera modes
-stream/        Browser and binary streaming
+stream/        Streaming protocol, server, browser UI and optional viewer CLI
 env/           Experimental Gymnasium environment (optional)
 validation/    Independent and real-data evidence pipelines
 tests/         Unit and evidence-integrity tests
 config/        Runtime configuration
 main.py        Supported simulation entry point
-viewer.py      Optional OpenCV/binary-protocol viewer
 ```
 
 ## Scope

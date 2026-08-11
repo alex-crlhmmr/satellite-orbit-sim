@@ -3,13 +3,18 @@
 import asyncio
 import json
 
+import numpy as np
 import pytest
 
+from stream.client import StreamingClient
 from stream.protocol import (
     CHANNEL_TELEMETRY,
+    CHANNEL_VIDEO,
     HEADER_SIZE,
+    MAX_TELEMETRY_PAYLOAD,
     decode_header,
     encode_frame,
+    encode_video_frame,
 )
 from stream.server import StreamingServer, _FrameChannel
 
@@ -45,6 +50,49 @@ def test_protocol_header_roundtrip():
         "sim_time": 123.5,
     }
     assert frame[HEADER_SIZE:] == payload
+
+
+def test_protocol_rejects_unknown_channels():
+    with pytest.raises(ValueError, match="unsupported channel id"):
+        encode_frame(99, b"payload", 1, 0.0)
+
+
+def test_client_rejects_wrong_channel_and_oversized_payload():
+    async def read(data, expected_channel, maximum):
+        reader = asyncio.StreamReader()
+        reader.feed_data(data)
+        reader.feed_eof()
+        return await StreamingClient()._read_frame(
+            reader, expected_channel, maximum
+        )
+
+    wrong_channel = encode_frame(CHANNEL_VIDEO, b"jpeg", 1, 0.0)
+    assert asyncio.run(read(
+        wrong_channel, CHANNEL_TELEMETRY, MAX_TELEMETRY_PAYLOAD
+    )) is None
+
+    oversized = encode_frame(
+        CHANNEL_TELEMETRY, b"x" * 8, 1, 0.0
+    )
+    assert asyncio.run(read(oversized, CHANNEL_TELEMETRY, 4)) is None
+
+
+def test_client_video_decoder_preserves_frame_metadata():
+    async def scenario():
+        encoded = encode_video_frame(
+            np.zeros((4, 6, 3), dtype=np.uint8), seq=17, sim_time=42.5
+        )
+        reader = asyncio.StreamReader()
+        reader.feed_data(encoded)
+        reader.feed_eof()
+        client = StreamingClient()
+        client._video_reader = reader
+        return await client.receive_video_frame()
+
+    frame = asyncio.run(scenario())
+    assert frame["image"].shape == (4, 6, 3)
+    assert frame["seq"] == 17
+    assert frame["sim_time"] == 42.5
 
 
 def test_latest_value_channel_drops_stale_payload():

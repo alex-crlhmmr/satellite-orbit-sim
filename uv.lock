@@ -674,6 +674,7 @@ rl = [
 ]
 viewer = [
     { name = "opencv-python" },
+    { name = "pillow" },
 ]
 
 [package.metadata]
@@ -688,6 +689,7 @@ requires-dist = [
     { name = "opencv-python", marker = "extra == 'viewer'", specifier = ">=4.8,<5" },
     { name = "pillow", marker = "extra == 'all'", specifier = ">=10,<13" },
     { name = "pillow", marker = "extra == 'render'", specifier = ">=10,<13" },
+    { name = "pillow", marker = "extra == 'viewer'", specifier = ">=10,<13" },
     { name = "pymsis", marker = "extra == 'all'", specifier = ">=0.10,<1" },
     { name = "pymsis", marker = "extra == 'legacy'", specifier = ">=0.10,<1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8,<9" },
