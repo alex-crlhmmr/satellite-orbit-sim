@@ -32,7 +32,10 @@ def j3_acceleration(r: np.ndarray, mu: float = MU_EARTH, re: float = R_EARTH) ->
 
     ax = f * x * (15.0 * z - 35.0 * z**3 / r2)
     ay = f * y * (15.0 * z - 35.0 * z**3 / r2)
-    az = f * (6.0 * r2 - 45.0 * z * z + 35.0 * z**4 / r2)
+    # Gradient of -mu/r * J3 * (re/r)^3 * P3(z/r).
+    # The axial component is not obtained by reusing the transverse factor.
+    az = (0.5 * J3 * mu * re**3 / r_mag**7
+          * (3.0 * r2 - 30.0 * z * z + 35.0 * z**4 / r2))
     return np.stack([ax, ay, az], axis=-1)
 
 
@@ -60,7 +63,7 @@ def j5_acceleration(r: np.ndarray, mu: float = MU_EARTH, re: float = R_EARTH) ->
 
     ax = f * x * z * (35.0 * r2 - 210.0 * z2 + 231.0 * z4 / r2)
     ay = f * y * z * (35.0 * r2 - 210.0 * z2 + 231.0 * z4 / r2)
-    az = f * (5.0 * r2 * r2 - 105.0 * r2 * z2 + 315.0 * z4 - 231.0 * z4 * z2 / r2)
+    az = -f * (5.0 * r2 * r2 - 105.0 * r2 * z2 + 315.0 * z4 - 231.0 * z4 * z2 / r2)
     return np.stack([ax, ay, az], axis=-1)
 
 
