@@ -1,0 +1,32 @@
+{
+  "frozen_manifest": "validation/real_data/manifest.yaml",
+  "models": [
+    {
+      "model": "exponential",
+      "passed": false,
+      "fitted_cda_over_mass_m2_per_kg": 0.010708689833447896,
+      "validation_rms_improvement_fraction": -0.07385104907420259,
+      "storm_test_rms_change_fraction": 0.013282560736037174,
+      "fitted_validation_mean_rms_m": 208.88598767960877,
+      "fitted_test_mean_rms_m": 1087.7748043481395
+    },
+    {
+      "model": "harris_priester",
+      "passed": false,
+      "fitted_cda_over_mass_m2_per_kg": 0.004702251457840522,
+      "validation_rms_improvement_fraction": 0.029388643103956835,
+      "storm_test_rms_change_fraction": 0.03264455908668462,
+      "fitted_validation_mean_rms_m": 208.3878017508749,
+      "fitted_test_mean_rms_m": 1088.7207872912347
+    },
+    {
+      "model": "nrlmsise00",
+      "passed": true,
+      "fitted_cda_over_mass_m2_per_kg": 0.005294673366995249,
+      "validation_rms_improvement_fraction": 0.6751595418407591,
+      "storm_test_rms_change_fraction": -0.29404964392802724,
+      "fitted_validation_mean_rms_m": 245.23758676339833,
+      "fitted_test_mean_rms_m": 1045.0523934194705
+    }
+  ]
+}

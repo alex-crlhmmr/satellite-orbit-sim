@@ -1,0 +1,224 @@
+{
+  "protocol_version": 1,
+  "passed": true,
+  "atmosphere_model": "exponential",
+  "dataset_name": "Swarm-A reduced-dynamic precise orbits",
+  "fitted_drag_area_m2": 1.667158069495775,
+  "validation_rms_improvement_fraction": 0.13844696534606982,
+  "effective_drag_scale": 1.667158069495775,
+  "fitted_cda_over_mass_m2_per_kg": 0.007837067848057062,
+  "dataset_files": [
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240331T235942_20240401T235942_0201.ZIP",
+      "sha256": "d2851e3be33e841929a4e5394cd49bf5874f81b630834531798e912b375de7f2",
+      "split": "train",
+      "regime": "quiet"
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240401T235942_20240402T235942_0201.ZIP",
+      "sha256": "8cb75d19912f3f3fc6c87b5a047f3fd1db2a4dcbd4dcda34bd60f72f9e1301e2",
+      "split": "train",
+      "regime": "quiet"
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240402T235942_20240403T235942_0201.ZIP",
+      "sha256": "4f6e0f37763f6e66a3008bdc7672a14cd87214270e414d050e05eef60931c564",
+      "split": "train",
+      "regime": "quiet"
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240415T235942_20240416T235942_0201.ZIP",
+      "sha256": "ab063e687c013fcafe264e788eb23ac9e38b339b502f9c14b3ded4f580c33e3e",
+      "split": "validation",
+      "regime": "quiet"
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240510T235942_20240511T235942_0201.ZIP",
+      "sha256": "16303e83b796a00e4bfaa7a75b32c7b71c520e60810d47b56d78dbff8235b76a",
+      "split": "validation",
+      "regime": "storm"
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20241010T235942_20241011T235942_0201.ZIP",
+      "sha256": "1648c71371d260102ce6bdb97c609782a96eb59705814898cdc5488fe9210026",
+      "split": "test",
+      "regime": "storm"
+    }
+  ],
+  "training_area_estimates_m2": [
+    2.018938542965716,
+    1.667158069495775,
+    1.5802789924805853
+  ],
+  "storm_test_rms_change_fraction": -0.1161508089886637,
+  "metrics": [
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240331T235942_20240401T235942_0201.ZIP",
+      "split": "train",
+      "regime": "quiet",
+      "model": "nominal",
+      "drag_area_m2": 1.0,
+      "final_position_m": 1555.9300480369534,
+      "rms_position_m": 726.8057016952436,
+      "p95_position_m": 1441.218912636723,
+      "final_radial_m": 24.889360271780685,
+      "final_along_track_m": -1555.716784009578,
+      "final_cross_track_m": 6.642445365473384,
+      "rms_along_track_m": 726.6104150155941
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240331T235942_20240401T235942_0201.ZIP",
+      "split": "train",
+      "regime": "quiet",
+      "model": "fitted",
+      "drag_area_m2": 1.667158069495775,
+      "final_position_m": 501.928315789103,
+      "rms_position_m": 252.55949449405273,
+      "p95_position_m": 486.06765396633335,
+      "final_radial_m": 12.43502384617243,
+      "final_along_track_m": -501.73368422788417,
+      "final_cross_track_m": 6.3807902288389675,
+      "rms_along_track_m": 252.25742624647816
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240401T235942_20240402T235942_0201.ZIP",
+      "split": "train",
+      "regime": "quiet",
+      "model": "nominal",
+      "drag_area_m2": 1.0,
+      "final_position_m": 1091.345506699107,
+      "rms_position_m": 473.50783065894194,
+      "p95_position_m": 1003.1420041761874,
+      "final_radial_m": 26.63361564528729,
+      "final_along_track_m": -1090.8809349221062,
+      "final_cross_track_m": 17.448533848469634,
+      "rms_along_track_m": 473.29707957033844
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240401T235942_20240402T235942_0201.ZIP",
+      "split": "train",
+      "regime": "quiet",
+      "model": "fitted",
+      "drag_area_m2": 1.667158069495775,
+      "final_position_m": 49.48793190857801,
+      "rms_position_m": 32.02728512327813,
+      "p95_position_m": 56.34326266682412,
+      "final_radial_m": 11.868661252296135,
+      "final_along_track_m": -44.739688439352854,
+      "final_cross_track_m": 17.508585408762595,
+      "rms_along_track_m": 30.17120427546166
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240402T235942_20240403T235942_0201.ZIP",
+      "split": "train",
+      "regime": "quiet",
+      "model": "nominal",
+      "drag_area_m2": 1.0,
+      "final_position_m": 853.6095699864369,
+      "rms_position_m": 414.30477084426406,
+      "p95_position_m": 805.9984135897296,
+      "final_radial_m": 12.446790065506036,
+      "final_along_track_m": -853.5187188909657,
+      "final_cross_track_m": -0.4145988661929179,
+      "rms_along_track_m": 414.14774799972605
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240402T235942_20240403T235942_0201.ZIP",
+      "split": "train",
+      "regime": "quiet",
+      "model": "fitted",
+      "drag_area_m2": 1.667158069495775,
+      "final_position_m": 201.61036959720494,
+      "rms_position_m": 68.57024308865093,
+      "p95_position_m": 148.13456409209297,
+      "final_radial_m": -3.54110461144076,
+      "final_along_track_m": 201.57917241330887,
+      "final_cross_track_m": -0.1973738025010878,
+      "rms_along_track_m": 67.89660436442206
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240415T235942_20240416T235942_0201.ZIP",
+      "split": "validation",
+      "regime": "quiet",
+      "model": "nominal",
+      "drag_area_m2": 1.0,
+      "final_position_m": 3686.7839663491677,
+      "rms_position_m": 1604.8712992223213,
+      "p95_position_m": 3295.0793496486176,
+      "final_radial_m": 64.81564713535167,
+      "final_along_track_m": -3686.152397794641,
+      "final_cross_track_m": -21.341196042989605,
+      "rms_along_track_m": 1604.5158756186133
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240415T235942_20240416T235942_0201.ZIP",
+      "split": "validation",
+      "regime": "quiet",
+      "model": "fitted",
+      "drag_area_m2": 1.667158069495775,
+      "final_position_m": 2626.4044594804286,
+      "rms_position_m": 1127.741208396438,
+      "p95_position_m": 2335.8793007203376,
+      "final_radial_m": 49.25792630525402,
+      "final_along_track_m": -2625.8578575135134,
+      "final_cross_track_m": -21.08443998138491,
+      "rms_along_track_m": 1127.4359400159394
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240510T235942_20240511T235942_0201.ZIP",
+      "split": "validation",
+      "regime": "storm",
+      "model": "nominal",
+      "drag_area_m2": 1.0,
+      "final_position_m": 11452.880067990587,
+      "rms_position_m": 5374.196763868319,
+      "p95_position_m": 10452.256937312482,
+      "final_radial_m": 114.7520701002669,
+      "final_along_track_m": -11452.299635093712,
+      "final_cross_track_m": 11.264200647258864,
+      "rms_along_track_m": 5373.4778027078455
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20240510T235942_20240511T235942_0201.ZIP",
+      "split": "validation",
+      "regime": "storm",
+      "model": "fitted",
+      "drag_area_m2": 1.667158069495775,
+      "final_position_m": 10367.97587469762,
+      "rms_position_m": 4885.09606041563,
+      "p95_position_m": 9474.098659613432,
+      "final_radial_m": 103.19615783805294,
+      "final_along_track_m": -10367.456326487072,
+      "final_cross_track_m": 11.117990040876839,
+      "rms_along_track_m": 4884.446091495171
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20241010T235942_20241011T235942_0201.ZIP",
+      "split": "test",
+      "regime": "storm",
+      "model": "nominal",
+      "drag_area_m2": 1.0,
+      "final_position_m": 10551.130606909373,
+      "rms_position_m": 5063.027717764506,
+      "p95_position_m": 9679.159328255597,
+      "final_radial_m": 91.65075044450144,
+      "final_along_track_m": -10550.722222098384,
+      "final_cross_track_m": -14.75859485425358,
+      "rms_along_track_m": 5062.399887526159
+    },
+    {
+      "filename": "SW_OPER_SP3ACOM_2__20241010T235942_20241011T235942_0201.ZIP",
+      "split": "test",
+      "regime": "storm",
+      "model": "fitted",
+      "drag_area_m2": 1.667158069495775,
+      "final_position_m": 9241.340106611317,
+      "rms_position_m": 4474.952952414131,
+      "p95_position_m": 8497.888554219953,
+      "final_radial_m": 73.58193750015596,
+      "final_along_track_m": -9241.035739318406,
+      "final_cross_track_m": -14.530284803814228,
+      "rms_along_track_m": 4474.406396044014
+    }
+  ]
+}

@@ -41,8 +41,20 @@ class ArcMetrics:
 def force_model(config: dict, drag_area: float) -> bh.ForceModelConfig:
     fixed = bh.ParameterSource.value
     spacecraft = config["spacecraft"]
+    atmosphere_name = str(config.get("atmosphere_model", "nrlmsise00")).lower()
+    atmosphere_models = {
+        "nrlmsise00": bh.AtmosphericModel.NRLMSISE00,
+        "harris_priester": bh.AtmosphericModel.HARRIS_PRIESTER,
+        # Single-scale-height control, anchored at 400 km. It is an ablation,
+        # not presented as a climatological competitor to the empirical models.
+        "exponential": bh.AtmosphericModel.exponential(
+            58_515.0, 3.725e-12, 400_000.0
+        ),
+    }
+    if atmosphere_name not in atmosphere_models:
+        raise ValueError(f"unsupported Brahe atmosphere model: {atmosphere_name}")
     drag = None if drag_area == 0 else bh.DragConfiguration(
-        bh.AtmosphericModel.NRLMSISE00, fixed(drag_area),
+        atmosphere_models[atmosphere_name], fixed(drag_area),
         fixed(spacecraft["drag_coefficient"]),
     )
     srp = bh.SolarRadiationPressureConfiguration(
@@ -196,6 +208,7 @@ def main() -> None:
               limits["fitted_drag_area_bounds_m2"][0] < fitted_area < limits["fitted_drag_area_bounds_m2"][1])
     payload = {
         "protocol_version": protocol["protocol_version"], "passed": bool(passed),
+        "atmosphere_model": protocol.get("atmosphere_model", "nrlmsise00"),
         "dataset_name": manifest["dataset"]["name"],
         "fitted_drag_area_m2": fitted_area, "validation_rms_improvement_fraction": validation_gain,
         "effective_drag_scale": fitted_area / nominal_area,

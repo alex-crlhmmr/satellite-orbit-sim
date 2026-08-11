@@ -42,6 +42,14 @@ class Propagator:
         self.enable_drag = bool(config.get("enable_drag", True))
         self.cd = float(config.get("cd", DEFAULT_CD))
         self.area_mass = float(config.get("area_mass", DEFAULT_AREA_MASS))
+        self.mass = float(config.get("mass", 1.0))
+        self._drag_geometry = None
+        geometry = config.get("drag_geometry")
+        self._drag_attitude = str(config.get("drag_attitude", "lvlh")).lower()
+        self._fixed_attitude_quaternion = config.get("attitude_quaternion_xyzw")
+        if geometry is not None:
+            from .aerodynamics import BoxWingGeometry
+            self._drag_geometry = BoxWingGeometry.from_config(geometry)
         self.enable_srp = bool(config.get("enable_srp", True))
         self.cr = float(config.get("cr", DEFAULT_CR))
         self.enable_third_body = bool(config.get("enable_third_body", True))
@@ -113,8 +121,25 @@ class Propagator:
 
         if self.enable_drag and self._drag_module is not None:
             jd = self.epoch_jd + t / SECONDS_PER_DAY
+            area_mass = self.area_mass
+            if self._drag_geometry is not None:
+                from .aerodynamics import lvlh_body_to_eci, quaternion_body_to_eci
+                omega_cross_r = np.array(
+                    [-OMEGA_EARTH * r[1], OMEGA_EARTH * r[0], 0.0]
+                )
+                if self._drag_attitude == "lvlh":
+                    body_to_eci = lvlh_body_to_eci(r, v)
+                elif self._drag_attitude == "fixed_quaternion":
+                    if self._fixed_attitude_quaternion is None:
+                        raise ValueError("fixed_quaternion attitude requires attitude_quaternion_xyzw")
+                    body_to_eci = quaternion_body_to_eci(self._fixed_attitude_quaternion)
+                else:
+                    raise ValueError(f"unknown drag attitude law: {self._drag_attitude}")
+                area_mass = self._drag_geometry.area_mass_ratio(
+                    body_to_eci, v - omega_cross_r, self.mass
+                )
             a_total += self._drag_module.drag_acceleration(
-                r, v, self.cd, self.area_mass,
+                r, v, self.cd, area_mass,
                 atmosphere=self._atmosphere, jd=jd,
             )
 

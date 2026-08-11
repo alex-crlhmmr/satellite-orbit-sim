@@ -39,6 +39,15 @@ propagator:
     # Continuous white-acceleration PSD in RTN [m²/s³]. Zero until calibrated
     # against representative tracking residuals; never invent confidence.
     process_noise_acceleration_psd_rtn: [0.0, 0.0, 0.0]
+    # Optional first-order attitude-aware drag geometry. When enabled, the
+    # legacy constant area_mass is replaced by projected area / mass at every
+    # force evaluation, assuming +X along-track / +Z nadir LVLH attitude.
+    # drag_geometry:
+    #   box_dimensions_m: [1.0, 1.0, 1.0]
+    #   panels:
+    #     - {normal_body: [0.0, 0.0, 1.0], area_m2: 2.0}
+    # drag_attitude: lvlh             # or fixed_quaternion
+    # attitude_quaternion_xyzw: [0.0, 0.0, 0.0, 1.0]
 
 # Atmosphere model (used by drag)
 atmosphere:
@@ -46,6 +55,12 @@ atmosphere:
   f107: 150.0                     # daily 10.7cm solar radio flux [sfu] (typical 70-300)
   f107a: 150.0                    # 81-day-centred average F10.7 [sfu]
   ap: 4.0                         # geomagnetic Ap index (quiet ~4, storm 50+)
+  # wind_ecef_mps: [0.0, 0.0, 0.0]  # optional specified neutral-wind sensitivity input
+  # For reproducible storm reconstruction, supply a daily CSV with columns
+  # date,f107,f107a,ap plus its immutable checksum. Missing/stale dates fail.
+  # space_weather_file: validation/data/space_weather.csv
+  # space_weather_sha256: <64 lowercase hex characters>
+  # space_weather_max_age_days: 1
 
 # Epoch (J2000 + offset)
 epoch:

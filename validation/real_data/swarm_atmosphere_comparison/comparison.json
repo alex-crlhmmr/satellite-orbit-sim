@@ -1,0 +1,32 @@
+{
+  "frozen_manifest": "validation/real_data/swarm_manifest.yaml",
+  "models": [
+    {
+      "model": "exponential",
+      "passed": true,
+      "fitted_cda_over_mass_m2_per_kg": 0.007837067848057062,
+      "validation_rms_improvement_fraction": 0.13844696534606982,
+      "storm_test_rms_change_fraction": -0.1161508089886637,
+      "fitted_validation_mean_rms_m": 3006.418634406034,
+      "fitted_test_mean_rms_m": 4474.952952414131
+    },
+    {
+      "model": "harris_priester",
+      "passed": true,
+      "fitted_cda_over_mass_m2_per_kg": 0.009046928687704972,
+      "validation_rms_improvement_fraction": 0.14433870525431325,
+      "storm_test_rms_change_fraction": -0.12939517995465166,
+      "fitted_validation_mean_rms_m": 3118.615904436717,
+      "fitted_test_mean_rms_m": 4539.930951927453
+    },
+    {
+      "model": "nrlmsise00",
+      "passed": true,
+      "fitted_cda_over_mass_m2_per_kg": 0.008099090678843,
+      "validation_rms_improvement_fraction": 0.6922932871820189,
+      "storm_test_rms_change_fraction": -0.7946562963572754,
+      "fitted_validation_mean_rms_m": 638.3010542641438,
+      "fitted_test_mean_rms_m": 576.4337240991563
+    }
+  ]
+}

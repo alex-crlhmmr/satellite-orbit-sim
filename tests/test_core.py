@@ -7,6 +7,7 @@ atmospheric density, Sun ephemeris, and batched operations.
 """
 
 import math
+import numpy as np
 import pytest
 import torch
 
@@ -34,7 +35,7 @@ from core.frames import (
     eci_to_rtn,
     gmst_from_jd,
 )
-from core.atmosphere import atmospheric_density
+from core.atmosphere import atmospheric_density, drag_acceleration, make_atmosphere
 from core.atmosphere import _ecef_to_geodetic
 from core.gravity import (
     j2_acceleration, j3_acceleration, j4_acceleration,
@@ -42,6 +43,7 @@ from core.gravity import (
 )
 from core.srp import sun_position_eci
 from core.propagator import Propagator
+from core.aerodynamics import BoxWingGeometry, lvlh_body_to_eci, quaternion_body_to_eci
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +98,56 @@ def _specific_energy(r, v, mu=MU_EARTH):
 def _angular_momentum(r, v):
     """Return angular momentum vector h = r x v."""
     return torch.cross(r, v, dim=-1)
+
+
+def test_lvlh_attitude_and_box_projected_area():
+    r = np.array([7.0e6, 0.0, 0.0])
+    v = np.array([0.0, 7500.0, 0.0])
+    dcm = lvlh_body_to_eci(r, v)
+    np.testing.assert_allclose(dcm.T @ dcm, np.eye(3), atol=1e-15)
+    np.testing.assert_allclose(dcm[:, 0], [0.0, 1.0, 0.0])
+    np.testing.assert_allclose(dcm[:, 2], [-1.0, 0.0, 0.0])
+    geometry = BoxWingGeometry.from_config({
+        "box_dimensions_m": [2.0, 3.0, 4.0],
+        "panels": [{"normal_body": [1.0, 0.0, 0.0], "area_m2": 5.0}],
+    })
+    assert geometry.projected_area(np.array([1.0, 0.0, 0.0])) == 17.0
+    assert geometry.projected_area(np.array([0.0, 1.0, 0.0])) == 8.0
+    identity = quaternion_body_to_eci([0.0, 0.0, 0.0, 2.0])
+    np.testing.assert_allclose(identity, np.eye(3))
+    with pytest.raises(ValueError, match="nonzero"):
+        quaternion_body_to_eci([0.0, 0.0, 0.0, 0.0])
+
+
+def test_geometry_changes_drag_with_attitude_relative_flow():
+    geometry = BoxWingGeometry.from_config(
+        {"box_dimensions_m": [2.0, 1.0, 1.0], "panels": []}
+    )
+    r = np.array([R_EARTH + 200e3, 0.0, 0.0])
+    v = np.array([0.0, 7800.0, 0.0])
+    along = geometry.area_mass_ratio_lvlh(r, v, v, 100.0)
+    nadir = geometry.area_mass_ratio_lvlh(r, v, -r, 100.0)
+    assert nadir == 2.0 * along
+
+
+def test_specified_neutral_wind_changes_relative_drag_velocity():
+    r = np.array([R_EARTH + 200e3, 0.0, 0.0])
+    v = np.array([0.0, 7800.0, 0.0])
+    calm = make_atmosphere({"model": "ussa76"})
+    # At J2000 GMST, construct ECEF wind which rotates to +ECI Y.
+    angle = gmst_from_jd(JD_J2000)
+    wind_ecef = [100.0 * np.sin(angle), 100.0 * np.cos(angle), 0.0]
+    windy = make_atmosphere({"model": "ussa76", "wind_ecef_mps": wind_ecef})
+    calm_drag = np.linalg.norm(drag_acceleration(r, v, 2.2, 0.01,
+                                                atmosphere=calm, jd=JD_J2000))
+    windy_drag = np.linalg.norm(drag_acceleration(r, v, 2.2, 0.01,
+                                                 atmosphere=windy, jd=JD_J2000))
+    assert windy_drag < calm_drag
+
+
+def test_unknown_atmosphere_never_silently_falls_back():
+    with pytest.raises(ValueError, match="unknown atmosphere model"):
+        make_atmosphere({"model": "dtm2020_typo"})
 
 
 # ===========================================================================

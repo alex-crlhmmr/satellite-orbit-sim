@@ -121,9 +121,12 @@ def drag_acceleration(
         else:
             r_mag = math.sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2])
             rho = _density_scalar(r_mag - re)
-        vrel0 = v[0] + omega * r[1]
-        vrel1 = v[1] - omega * r[0]
-        vrel2 = v[2]
+        wind = (atmosphere.wind_eci(r, jd)
+                if atmosphere is not None and hasattr(atmosphere, "wind_eci")
+                else np.zeros(3, dtype=np.float64))
+        vrel0 = v[0] + omega * r[1] - wind[0]
+        vrel1 = v[1] - omega * r[0] - wind[1]
+        vrel2 = v[2] - wind[2]
         vrel_mag = math.sqrt(vrel0 * vrel0 + vrel1 * vrel1 + vrel2 * vrel2)
         k = -0.5 * rho * cd * area_mass * vrel_mag
         return np.array([k * vrel0, k * vrel1, k * vrel2], dtype=np.float64)
@@ -166,6 +169,9 @@ class USStd1976Atmosphere:
         alt = math.sqrt(r_eci[0] ** 2 + r_eci[1] ** 2 + r_eci[2] ** 2) - R_EARTH
         return _density_scalar(alt)
 
+    def wind_eci(self, r_eci: np.ndarray, jd: float = None) -> np.ndarray:
+        return np.zeros(3, dtype=np.float64)
+
 
 class NRLMSISE2Atmosphere:
     """
@@ -186,12 +192,13 @@ class NRLMSISE2Atmosphere:
     name = "nrlmsise2"
 
     def __init__(self, f107: float = 150.0, f107a: float = 150.0,
-                 ap: float = 4.0) -> None:
+                 ap: float = 4.0, space_weather=None) -> None:
         from pymsis import calculate as _calc  # imported lazily
 
         self.f107 = float(f107)
         self.f107a = float(f107a)
         self.ap = float(ap)
+        self.space_weather = space_weather
         self._calc = _calc
 
         # Pre-allocate the small arrays pymsis expects.
@@ -214,7 +221,13 @@ class NRLMSISE2Atmosphere:
         lat_deg = math.degrees(lat_rad)
         lon_deg = math.degrees(math.atan2(y_e, x_e))
 
-        date = np.array([_jd_to_datetime_utc(jd)], dtype="datetime64[us]")
+        instant = _jd_to_datetime_utc(jd)
+        if self.space_weather is not None:
+            record = self.space_weather.at(instant)
+            self._f107_arr[0] = record.f107
+            self._f107a_arr[0] = record.f107a
+            self._ap_arr[0, :] = record.ap
+        date = np.array([instant], dtype="datetime64[us]")
         out = self._calc(
             date,
             np.array([lon_deg], dtype=np.float64),
@@ -231,6 +244,37 @@ class NRLMSISE2Atmosphere:
         if not math.isfinite(rho) or rho < 0.0:
             return _density_scalar(alt_km * 1000.0)
         return rho
+
+    def wind_eci(self, r_eci: np.ndarray, jd: float) -> np.ndarray:
+        # MSIS is a density/composition model and supplies no neutral winds.
+        return np.zeros(3, dtype=np.float64)
+
+
+class WindAdjustedAtmosphere:
+    """Attach a specified Earth-fixed neutral-wind vector to a density model.
+
+    This is primarily an interface and sensitivity-analysis tool. A constant
+    vector is not a substitute for HWM or measured winds.
+    """
+
+    def __init__(self, base, wind_ecef_mps) -> None:
+        wind = np.asarray(wind_ecef_mps, dtype=np.float64)
+        if wind.shape != (3,) or not np.isfinite(wind).all():
+            raise ValueError("wind_ecef_mps must be a finite three-vector")
+        self.base = base
+        self.wind_ecef_mps = wind
+        self.name = f"{base.name}+specified_wind"
+
+    def density(self, r_eci: np.ndarray, jd: float) -> float:
+        return self.base.density(r_eci, jd)
+
+    def wind_eci(self, r_eci: np.ndarray, jd: float) -> np.ndarray:
+        from .frames import gmst_from_jd
+        angle = gmst_from_jd(jd)
+        cosine, sine = math.cos(angle), math.sin(angle)
+        x, y, z = self.wind_ecef_mps
+        return np.array([cosine * x - sine * y,
+                         sine * x + cosine * y, z], dtype=np.float64)
 
 
 def _ecef_to_geodetic(x: float, y: float, z: float) -> tuple[float, float]:
@@ -272,15 +316,31 @@ def make_atmosphere(config: dict):
     if not isinstance(config, dict):
         config = {}
     model = str(config.get("model", "nrlmsise2")).lower()
+    result = None
     if model in ("ussa76", "us_std_1976", "usstd76", "exponential"):
-        return USStd1976Atmosphere()
-    if model in ("nrlmsise2", "nrlmsise", "msis", "msis2"):
+        result = USStd1976Atmosphere()
+    elif model in ("nrlmsise2", "nrlmsise", "msis", "msis2"):
         try:
-            return NRLMSISE2Atmosphere(
+            space_weather = None
+            if "space_weather_file" in config:
+                from .space_weather import SpaceWeatherSeries
+                space_weather = SpaceWeatherSeries.from_csv(
+                    config["space_weather_file"],
+                    max_age_days=config.get("space_weather_max_age_days", 1),
+                    expected_sha256=config.get("space_weather_sha256"),
+                )
+            result = NRLMSISE2Atmosphere(
                 f107=config.get("f107", 150.0),
                 f107a=config.get("f107a", 150.0),
                 ap=config.get("ap", 4.0),
+                space_weather=space_weather,
             )
-        except ImportError:
-            return USStd1976Atmosphere()
-    return USStd1976Atmosphere()
+        except ImportError as exc:
+            raise RuntimeError(
+                "NRLMSISE-2 was requested but pymsis is not installed"
+            ) from exc
+    if result is None:
+        raise ValueError(f"unknown atmosphere model: {model}")
+    if "wind_ecef_mps" in config:
+        result = WindAdjustedAtmosphere(result, config["wind_ecef_mps"])
+    return result

@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from validation.real_data.benchmark import fit_effective_area
+from validation.real_data.benchmark import fit_effective_area, force_model
 from validation.real_data.sentinel_eof import read_eof
 from validation.real_data.swarm_sp3 import read_sp3_zip
 
@@ -75,9 +75,50 @@ def test_robust_area_fit_resists_one_maneuver_outlier():
     assert fitted == 9.5
 
 
+def test_benchmark_rejects_unknown_atmosphere_model():
+    protocol = yaml.safe_load(
+        (ROOT / "validation/real_data/swarm_protocol.yaml").read_text()
+    )
+    protocol["atmosphere_model"] = "made_up"
+    try:
+        force_model(protocol, 1.0)
+    except ValueError as error:
+        assert "unsupported Brahe atmosphere model" in str(error)
+    else:
+        raise AssertionError("unknown atmosphere model was accepted")
+
+
 def test_committed_real_data_gate_passes():
     import json
     result = json.loads((ROOT / "validation/real_data/results/results.json").read_text())
     assert result["passed"] is True
     assert result["validation_rms_improvement_fraction"] >= 0.05
     assert result["storm_test_rms_change_fraction"] <= 0.10
+
+
+def test_committed_swarm_atmosphere_comparison_prefers_nrlmsise00():
+    import json
+    path = ROOT / "validation/real_data/swarm_atmosphere_comparison/comparison.json"
+    comparison = json.loads(path.read_text())
+    rows = {row["model"]: row for row in comparison["models"]}
+    assert set(rows) == {"exponential", "harris_priester", "nrlmsise00"}
+    for metric in ("fitted_validation_mean_rms_m", "fitted_test_mean_rms_m"):
+        assert rows["nrlmsise00"][metric] == min(row[metric] for row in rows.values())
+
+
+def test_committed_sentinel_comparison_preserves_mixed_result():
+    import json
+    path = ROOT / "validation/real_data/sentinel_atmosphere_comparison/comparison.json"
+    comparison = json.loads(path.read_text())
+    rows = {row["model"]: row for row in comparison["models"]}
+    assert rows["nrlmsise00"]["passed"] is True
+    assert rows["exponential"]["passed"] is False
+    assert rows["harris_priester"]["passed"] is False
+    assert rows["nrlmsise00"]["fitted_test_mean_rms_m"] == min(
+        row["fitted_test_mean_rms_m"] for row in rows.values()
+    )
+    # Avoid rewriting the evidence as a universal win: NRLMSISE-00 did not
+    # have the lowest absolute validation RMS on this mission.
+    assert rows["nrlmsise00"]["fitted_validation_mean_rms_m"] > min(
+        row["fitted_validation_mean_rms_m"] for row in rows.values()
+    )
