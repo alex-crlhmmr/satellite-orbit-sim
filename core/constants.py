@@ -4,8 +4,9 @@ WGS-84, IAU, and derived constants for orbital mechanics.
 All values in SI units (m, kg, s, rad) unless noted.
 """
 
-import torch
 import math
+
+import torch
 
 # --- WGS-84 Earth Constants ---
 MU_EARTH = 3.986004418e14          # Gravitational parameter [m³/s²]

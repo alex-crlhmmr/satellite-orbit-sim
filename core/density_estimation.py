@@ -8,8 +8,8 @@ best-fit correction invisibly into spacecraft area.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)

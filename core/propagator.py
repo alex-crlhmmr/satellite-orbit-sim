@@ -14,12 +14,19 @@ State vectors are (6,) with [x, y, z, vx, vy, vz] in ECI [m, m/s].
 """
 
 import math
+
 import numpy as np
 import torch
 
 from .constants import (
-    MU_EARTH, R_EARTH, OMEGA_EARTH, SECONDS_PER_DAY,
-    DEFAULT_CD, DEFAULT_CR, DEFAULT_AREA_MASS, JD_J2000,
+    DEFAULT_AREA_MASS,
+    DEFAULT_CD,
+    DEFAULT_CR,
+    JD_J2000,
+    MU_EARTH,
+    OMEGA_EARTH,
+    R_EARTH,
+    SECONDS_PER_DAY,
 )
 from .gravity import zonal_acceleration
 from .third_body import sun_moon_acceleration

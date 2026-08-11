@@ -19,15 +19,18 @@ torch tensors for backward compatibility with the test suite.
 """
 
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import numpy as np
 import torch
 
 from .constants import (
-    ATMOSPHERE_BANDS, OMEGA_EARTH, R_EARTH, MU_EARTH, FLATTENING,
+    ATMOSPHERE_BANDS,
+    FLATTENING,
+    MU_EARTH,
+    OMEGA_EARTH,
+    R_EARTH,
 )
-
 
 _BAND_BASE_ALT_M = np.array(
     [_alt_km * 1000.0 for _alt_km, _, _ in ATMOSPHERE_BANDS],

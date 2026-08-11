@@ -7,19 +7,20 @@ The reinforcement-learning environment is experimental and is not wired into
 this entry point.
 """
 
-import asyncio
 import argparse
+import asyncio
 import time
-import yaml
-import numpy as np
-import torch
+from collections import deque
 from datetime import datetime
 from pathlib import Path
-from collections import deque
 
-from core.constants import MU_EARTH, R_EARTH, DEG2RAD, M2KM
-from core.frames import datetime_to_jd, gmst_from_seconds, eci_to_rtn, rtn_to_eci
+import numpy as np
+import torch
+import yaml
+
+from core.constants import DEG2RAD, M2KM, MU_EARTH, R_EARTH
 from core.elements import cartesian_to_keplerian, keplerian_to_cartesian
+from core.frames import datetime_to_jd, gmst_from_seconds
 from core.propagator import Propagator
 from core.srp import sun_position_eci
 
@@ -49,37 +50,75 @@ def build_initial_state(config: dict) -> torch.Tensor:
 
 
 def build_propagator(config: dict, epoch_jd: float) -> Propagator:
-    """Build propagator from config."""
+    """Build the selected backend, rejecting keys it cannot honor."""
     sat = config["satellite"]
     prop = config["propagator"]
-
-    prop_config = {
-        "mu": MU_EARTH,
-        "dt": prop["dt"],
-        "enable_j2": prop["enable_j2"],
-        "max_j_degree": prop["max_j_degree"],
-        "enable_drag": prop["enable_drag"],
-        "cd": sat["drag_coefficient"],
-        "area_mass": sat["area_to_mass_ratio"],
-        "mass": sat["mass_kg"],
-        "drag_area_m2": sat.get("drag_area_m2"),
-        "srp_area_m2": sat.get("srp_area_m2"),
-        "enable_srp": prop["enable_srp"],
-        "cr": sat["reflectivity_coefficient"],
-        "enable_third_body": prop["enable_third_body"],
-        "epoch_jd": epoch_jd,
-        "atmosphere": config.get("atmosphere", {}),
-        "device": "cpu",
+    root_allowed = {"backend", "dt", "high_fidelity", "legacy"}
+    root_unknown = set(prop) - root_allowed
+    if root_unknown:
+        raise ValueError(
+            "unknown propagator keys: " + ", ".join(sorted(root_unknown))
+        )
+    backend = str(prop.get("backend", "high_fidelity")).lower()
+    if backend not in {"high_fidelity", "legacy"}:
+        raise ValueError(f"unknown propagator backend: {backend}")
+    common = {
+        "dt": prop["dt"], "epoch_jd": epoch_jd, "mass": sat["mass_kg"],
+        "cd": sat["drag_coefficient"], "cr": sat["reflectivity_coefficient"],
+        "area_mass": sat["area_to_mass_ratio"], "device": "cpu",
         "dtype": torch.float64,
     }
-    # None means "derive area from area/mass"; omit those keys so the adapter
-    # can distinguish it from an explicit value.
-    prop_config = {k: v for k, v in prop_config.items() if v is not None}
-    hf = prop.get("high_fidelity", {})
-    prop_config.update(hf)
-    if prop.get("backend", "legacy") == "high_fidelity":
+    if backend == "high_fidelity":
+        hf = prop.get("high_fidelity", {})
+        hf_allowed = {
+            "gravity_degree", "gravity_order", "enable_drag", "enable_srp",
+            "enable_third_body", "enable_relativity", "enable_tides", "abs_tol",
+            "rel_tol", "max_step", "initial_covariance",
+            "process_noise_acceleration_psd_rtn",
+        }
+        unsupported = {"drag_geometry", "drag_attitude", "attitude_quaternion_xyzw"}
+        supplied = unsupported.intersection(hf)
+        if supplied:
+            raise ValueError(
+                "high_fidelity backend does not support: " + ", ".join(sorted(supplied))
+            )
+        unknown = set(hf) - hf_allowed
+        if unknown:
+            raise ValueError(
+                "unknown high_fidelity keys: " + ", ".join(sorted(unknown))
+            )
+        hf_config = common | hf
+        for source, target in (("drag_area_m2", "drag_area_m2"),
+                               ("srp_area_m2", "srp_area_m2")):
+            if sat.get(source) is not None:
+                hf_config[target] = sat[source]
         from core.high_fidelity import HighFidelityPropagator
-        return HighFidelityPropagator(prop_config)
+        return HighFidelityPropagator(hf_config)
+
+    legacy = prop.get("legacy", {})
+    legacy_allowed = {
+        "enable_j2", "max_j_degree", "enable_drag", "enable_srp",
+        "enable_third_body", "drag_geometry", "drag_attitude",
+        "attitude_quaternion_xyzw", "epoch_jd",
+    }
+    legacy_unknown = set(legacy) - legacy_allowed
+    if legacy_unknown:
+        raise ValueError(
+            "unknown legacy keys: " + ", ".join(sorted(legacy_unknown))
+        )
+    prop_config = {
+        "mu": MU_EARTH,
+        **common,
+        "enable_j2": legacy.get("enable_j2", True),
+        "max_j_degree": legacy.get("max_j_degree", 6),
+        "enable_drag": legacy.get("enable_drag", True),
+        "enable_srp": legacy.get("enable_srp", True),
+        "enable_third_body": legacy.get("enable_third_body", True),
+        "atmosphere": config.get("atmosphere", {}),
+    }
+    prop_config.update({key: legacy[key] for key in
+                        ("drag_geometry", "drag_attitude", "attitude_quaternion_xyzw")
+                        if key in legacy})
     return Propagator(prop_config)
 
 

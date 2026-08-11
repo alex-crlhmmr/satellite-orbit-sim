@@ -1,6 +1,7 @@
 """Earth mesh generation and texture management for orbital rendering."""
 
 import os
+
 import numpy as np
 
 try:

@@ -1,7 +1,7 @@
 """Regression tests for the experimental RL environment configuration."""
 
-from main import load_config
 from env.orbital_env import OrbitalEnv
+from main import load_config
 
 
 def test_default_yaml_constructs_env_and_uses_calendar_epoch():

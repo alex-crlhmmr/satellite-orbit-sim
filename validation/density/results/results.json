@@ -1,0 +1,58 @@
+{
+  "protocol_version": 1,
+  "passed": true,
+  "dataset": {
+    "name": "GRACE-FO accelerometer-derived thermosphere density version 02c",
+    "provider": "TU Delft Thermosphere Data",
+    "base_url": "https://thermosphere.tudelft.nl/data/data/version_02/GRACE-FO_data/",
+    "license": "CC BY 4.0",
+    "time_system": "GPS",
+    "sampling_s": 10,
+    "citation_url": "https://thermosphere.tudelft.nl/"
+  },
+  "files": [
+    {
+      "filename": "GC_DNS_ACC_2024_04_v02c.zip",
+      "sha256": "78dce492bbfb2f3bdd71ed358256cf2786d51d836f32dafae9e8f206c375cebf"
+    },
+    {
+      "filename": "GC_DNS_ACC_2024_05_v02c.zip",
+      "sha256": "87b92b98232d9caeb23c912e82dd74b8b3a0704b8e34ad707bd53609c0f773fe"
+    },
+    {
+      "filename": "GC_DNS_ACC_2024_10_v02c.zip",
+      "sha256": "72e11a0456977e301ea568f1211631c9e5b69f83227c96e5dfb6cc8ff0b02c81"
+    }
+  ],
+  "space_weather": {
+    "filename": "sw19571001-v1.7.0.txt",
+    "url": "https://raw.githubusercontent.com/duncaneddy/brahe/d80449d2f08ea036b54809106f00e1936ff97768/data/space_weather/sw19571001.txt",
+    "sha256": "f66c560eac63624ac6a869afa220fe2e425d76216c8385720a580133c7bfca62",
+    "format": "CSSI Space Weather version 1.2"
+  },
+  "training_static_scale": 0.7896194242448393,
+  "training_ratio_median_absolute_deviation": 0.059124363098691735,
+  "selected_process_noise_psd_per_s": 1e-05,
+  "validation_selection_mape": 0.1489185655094113,
+  "validation_selection_mean_nis": 1.1616350749504711,
+  "metrics": {
+    "validation": {
+      "samples": 1152,
+      "raw_mape": 0.5125750557848692,
+      "static_mape": 0.3536727871848707,
+      "online_mape": 0.1489185655094113,
+      "static_improvement_fraction": 0.3100078062844531,
+      "online_improvement_fraction": 0.7094697374975006,
+      "online_mean_nis": 1.1616350749504711
+    },
+    "test": {
+      "samples": 864,
+      "raw_mape": 0.9256357304820737,
+      "static_mape": 0.5900727347989543,
+      "online_mape": 0.1198139021767778,
+      "static_improvement_fraction": 0.362521653640528,
+      "online_improvement_fraction": 0.8705604178499263,
+      "online_mean_nis": 0.731306993767902
+    }
+  }
+}

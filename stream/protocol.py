@@ -24,6 +24,13 @@ MAGIC = b"ORBT"
 
 CHANNEL_VIDEO = 1
 CHANNEL_TELEMETRY = 2
+VALID_CHANNELS = frozenset({CHANNEL_VIDEO, CHANNEL_TELEMETRY})
+
+# Defensive receive limits. These are intentionally much larger than normal
+# simulator messages while preventing an invalid header from requesting an
+# unbounded allocation/read.
+MAX_VIDEO_PAYLOAD = 32 * 1024 * 1024
+MAX_TELEMETRY_PAYLOAD = 1024 * 1024
 
 # >  = big-endian
 # 4s = 4-byte char[] (magic)
@@ -43,6 +50,8 @@ def encode_frame(channel_id: int, payload_bytes: bytes, seq: int,
                  sim_time: float) -> bytes:
     """Pack a protocol header in front of *payload_bytes* and return the
     complete frame as a single ``bytes`` object."""
+    if channel_id not in VALID_CHANNELS:
+        raise ValueError(f"unsupported channel id: {channel_id}")
     header = struct.pack(
         _HEADER_FMT,
         MAGIC,
@@ -65,7 +74,7 @@ def decode_header(data: bytes) -> dict | None:
         _HEADER_FMT, data[:HEADER_SIZE]
     )
 
-    if magic != MAGIC:
+    if magic != MAGIC or channel_id not in VALID_CHANNELS:
         return None
 
     return {

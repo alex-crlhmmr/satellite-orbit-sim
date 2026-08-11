@@ -1,0 +1,16 @@
+protocol_version: 1
+sample_interval_s: 300
+observation_relative_sigma: 0.15
+splits:
+  train:
+    - [2024-04-01, 2024-04-04]
+  validation:
+    - [2024-04-15, 2024-04-17]
+    - [2024-05-10, 2024-05-12]
+  test:
+    - [2024-10-10, 2024-10-13]
+process_noise_candidates_per_s: [0.0, 1.0e-8, 1.0e-7, 1.0e-6, 1.0e-5, 1.0e-4]
+acceptance:
+  static_test_mape_improvement_min_fraction: 0.02
+  online_test_mape_improvement_min_fraction: 0.10
+  online_test_mean_nis_bounds: [0.2, 5.0]

@@ -19,9 +19,8 @@ import asyncio
 import io
 import json
 import logging
-import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 from PIL import Image
@@ -197,7 +196,7 @@ class StreamingServer:
         jpeg = buf.getvalue()
 
         if has_binary:
-            from .protocol import encode_frame, CHANNEL_VIDEO
+            from .protocol import CHANNEL_VIDEO, encode_frame
             binary_payload = encode_frame(CHANNEL_VIDEO, jpeg, seq, sim_time)
             for ch in list(self._binary_video_channels):
                 if ch.closed:

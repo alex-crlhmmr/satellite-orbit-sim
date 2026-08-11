@@ -7,18 +7,16 @@ Propagator uses ``_sun_position_eci_np`` directly.
 """
 
 import math
+
 import numpy as np
 import torch
 
 from .constants import (
-    MU_SUN,
     AU,
+    DAYS_PER_CENTURY,
+    JD_J2000,
     P_SUN,
     R_EARTH,
-    R_SUN,
-    DEG2RAD,
-    JD_J2000,
-    DAYS_PER_CENTURY,
 )
 
 

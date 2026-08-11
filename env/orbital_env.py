@@ -17,30 +17,29 @@ Action space (3,):
 
 import math
 from datetime import datetime
+
+import gymnasium as gym
 import numpy as np
 import torch
-import gymnasium as gym
 from gymnasium import spaces
 
 from core.constants import (
+    AU,
+    DEG2RAD,
+    JD_J2000,
+    M2KM,
     MU_EARTH,
     R_EARTH,
-    DEG2RAD,
-    M2KM,
-    JD_J2000,
     SECONDS_PER_DAY,
-    AU,
-    R_SUN,
 )
 from core.elements import (
     cartesian_to_keplerian,
     cartesian_to_roe,
     keplerian_to_cartesian,
 )
-from core.frames import eci_to_rtn, rtn_to_eci
+from core.frames import rtn_to_eci
 from core.propagator import Propagator
 from env.rewards import RewardFunction
-
 
 # ---------------------------------------------------------------------------
 # Sun position and shadow utilities (self-contained for this module)
@@ -146,27 +145,30 @@ DEFAULT_CONFIG = {
         "drag_coefficient": 2.2,
         "reflectivity_coefficient": 1.5,
         "area_to_mass_ratio": 0.01,       # m^2/kg
-        "max_thrust_n": 1.0,              # max thrust per axis [N]
+        "max_thrust_n": 0.1,              # max thrust per axis [N]
     },
     # Propagator settings (force model + integration step)
     "propagator": {
+        "backend": "legacy",
         "dt": 10.0,                       # RK4 step [s]
-        "enable_j2": True,
-        "max_j_degree": 6,                # J2 through J6
-        "enable_drag": True,
-        "enable_srp": True,
-        "enable_third_body": True,
-        "epoch_jd": JD_J2000,
+        "legacy": {
+            "enable_j2": True,
+            "max_j_degree": 6,            # J2 through J6
+            "enable_drag": True,
+            "enable_srp": True,
+            "enable_third_body": True,
+            "epoch_jd": JD_J2000,
+        },
     },
     # Environment / episode + reward settings
     "environment": {
         "env_dt": 60.0,                   # time per env.step() [s]
-        "max_steps": 1000,
+        "max_steps": 1440,
         "reward_type": "station_keeping",
         "reward_weights": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         "fuel_penalty": 0.1,
         "reward_scale": 1.0,
-        "deorbit_target_altitude_km": 150.0,
+        "deorbit_target_altitude_km": 120.0,
     },
 }
 
@@ -250,12 +252,16 @@ class OrbitalEnv(gym.Env):
         if config is None:
             config = {}
         _reject_legacy_config(config)
+        supplied_prop_root = config.get("propagator", {})
+        supplied_prop = supplied_prop_root.get("legacy", supplied_prop_root)
+        explicit_epoch_jd = "epoch_jd" in supplied_prop
         self.config = _deep_merge(DEFAULT_CONFIG, config)
 
         # Unpack configuration
         orb = self.config["orbit"]
         sat = self.config["satellite"]
-        prop = self.config["propagator"]
+        prop_root = self.config["propagator"]
+        prop = prop_root.get("legacy", prop_root)
         env_cfg = self.config["environment"]
 
         # Orbital elements (convert degrees to radians for angular elements)
@@ -274,10 +280,9 @@ class OrbitalEnv(gym.Env):
         self.max_thrust = sat["max_thrust_n"]
 
         # Simulation parameters
-        self.dt = prop["dt"]
+        self.dt = prop_root["dt"]
         self.env_dt = env_cfg["env_dt"]
         self.max_steps = env_cfg["max_steps"]
-        explicit_epoch_jd = "epoch_jd" in config.get("propagator", {})
         if "epoch" in config and not explicit_epoch_jd:
             from core.frames import datetime_to_jd
             ep = self.config["epoch"]

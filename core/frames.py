@@ -4,10 +4,12 @@ Reference frame transformations: ECI, ECEF, RTN, perifocal.
 All functions support batched (B, 3) tensors using float64.
 """
 
-import torch
 import math
 from datetime import datetime
-from .constants import OMEGA_EARTH, JD_J2000, SECONDS_PER_DAY, DAYS_PER_CENTURY, DEG2RAD
+
+import torch
+
+from .constants import DAYS_PER_CENTURY, DEG2RAD, JD_J2000, SECONDS_PER_DAY
 
 
 def datetime_to_jd(dt: datetime) -> float:

@@ -9,7 +9,6 @@ from validation.real_data.benchmark import fit_effective_area, force_model
 from validation.real_data.sentinel_eof import read_eof
 from validation.real_data.swarm_sp3 import read_sp3_zip
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -64,7 +63,8 @@ EOF
 
 def test_robust_area_fit_resists_one_maneuver_outlier():
     base = np.zeros((3, 6))
-    response = np.zeros((3, 6)); response[:, 0] = [0.0, 10.0, 20.0]
+    response = np.zeros((3, 6))
+    response[:, 0] = [0.0, 10.0, 20.0]
     training = []
     for area in (8.0, 10.0, 9.0, 200.0):
         truth = base.copy()

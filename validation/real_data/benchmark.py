@@ -17,9 +17,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
+from validation.real_data.fetch import sha256
 from validation.real_data.sentinel_eof import OrbitArc, read_eof
 from validation.real_data.swarm_sp3 import read_sp3_zip
-from validation.real_data.fetch import sha256
 
 
 @dataclass
@@ -166,7 +166,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("validation/real_data/results"))
     args = parser.parse_args()
     manifest, protocol = yaml.safe_load(args.manifest.read_text()), yaml.safe_load(args.protocol.read_text())
-    bh.initialize_eop(); bh.initialize_sw()
+    bh.initialize_eop()
+    bh.initialize_sw()
     arcs = []
     for entry in manifest["files"]:
         source = args.data / entry["filename"]

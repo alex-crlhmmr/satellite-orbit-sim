@@ -17,6 +17,8 @@ from .protocol import (
     CHANNEL_TELEMETRY,
     CHANNEL_VIDEO,
     HEADER_SIZE,
+    MAX_TELEMETRY_PAYLOAD,
+    MAX_VIDEO_PAYLOAD,
     decode_header,
 )
 
@@ -65,6 +67,12 @@ class StreamingClient:
             # Clean up the video connection that already succeeded.
             if self._video_writer is not None:
                 self._video_writer.close()
+                try:
+                    await self._video_writer.wait_closed()
+                except OSError:
+                    pass
+                self._video_reader = None
+                self._video_writer = None
             raise
 
     async def disconnect(self) -> None:
@@ -86,7 +94,12 @@ class StreamingClient:
     # Low-level frame reading
     # ------------------------------------------------------------------
 
-    async def _read_frame(self, reader: asyncio.StreamReader) -> dict | None:
+    async def _read_frame(
+        self,
+        reader: asyncio.StreamReader,
+        expected_channel: int,
+        max_payload: int,
+    ) -> dict | None:
         """Read one complete protocol frame from *reader*.
 
         Returns a dict with keys ``channel``, ``data`` (raw payload bytes),
@@ -99,7 +112,19 @@ class StreamingClient:
 
         header = decode_header(header_bytes)
         if header is None:
-            logger.warning("Received frame with invalid magic bytes")
+            logger.warning("Received invalid protocol header")
+            return None
+        if header["channel"] != expected_channel:
+            logger.warning(
+                "Received channel %d on channel %d connection",
+                header["channel"], expected_channel,
+            )
+            return None
+        if header["length"] > max_payload:
+            logger.warning(
+                "Rejected %d-byte payload (limit %d)",
+                header["length"], max_payload,
+            )
             return None
 
         try:
@@ -118,20 +143,32 @@ class StreamingClient:
     # High-level receive helpers
     # ------------------------------------------------------------------
 
-    async def receive_video(self) -> np.ndarray | None:
-        """Receive the next video frame and decode it to a NumPy RGB array.
+    async def receive_video_frame(self) -> dict | None:
+        """Receive video pixels together with sequence and simulation time.
 
         Returns ``None`` on connection loss.
         """
         if self._video_reader is None:
             raise RuntimeError("Not connected -- call connect() first")
 
-        frame = await self._read_frame(self._video_reader)
+        frame = await self._read_frame(
+            self._video_reader, CHANNEL_VIDEO, MAX_VIDEO_PAYLOAD
+        )
         if frame is None:
             return None
 
-        img = Image.open(io.BytesIO(frame["data"]))
-        return np.asarray(img)
+        with Image.open(io.BytesIO(frame["data"])) as image:
+            rgb = np.asarray(image.convert("RGB")).copy()
+        return {
+            "image": rgb,
+            "seq": frame["seq"],
+            "sim_time": frame["sim_time"],
+        }
+
+    async def receive_video(self) -> np.ndarray | None:
+        """Receive the next video frame as an RGB array."""
+        frame = await self.receive_video_frame()
+        return None if frame is None else frame["image"]
 
     async def receive_telemetry(self) -> dict | None:
         """Receive the next telemetry frame and return it as a dict.
@@ -141,7 +178,9 @@ class StreamingClient:
         if self._telemetry_reader is None:
             raise RuntimeError("Not connected -- call connect() first")
 
-        frame = await self._read_frame(self._telemetry_reader)
+        frame = await self._read_frame(
+            self._telemetry_reader, CHANNEL_TELEMETRY, MAX_TELEMETRY_PAYLOAD
+        )
         if frame is None:
             return None
 
@@ -150,71 +189,3 @@ class StreamingClient:
             "seq": frame["seq"],
             "sim_time": frame["sim_time"],
         }
-
-    # ------------------------------------------------------------------
-    # Display loop (requires OpenCV)
-    # ------------------------------------------------------------------
-
-    async def run_display(self) -> None:
-        """Main loop: receive video frames, overlay the latest telemetry,
-        and display them in an OpenCV window.  Press 'q' to quit.
-
-        OpenCV (``cv2``) is imported lazily so the rest of the client can
-        be used without it.
-        """
-        try:
-            import cv2
-        except ImportError:
-            logger.error("OpenCV (cv2) is required for run_display()")
-            raise
-
-        await self.connect()
-
-        latest_telemetry: dict = {}
-        window_name = "Orbital Simulation"
-
-        # Launch a background task that continuously updates telemetry.
-        async def _telemetry_loop() -> None:
-            nonlocal latest_telemetry
-            while True:
-                telem = await self.receive_telemetry()
-                if telem is None:
-                    break
-                latest_telemetry = telem.get("telemetry", {})
-
-        telemetry_task = asyncio.create_task(_telemetry_loop())
-
-        try:
-            while True:
-                rgb = await self.receive_video()
-                if rgb is None:
-                    logger.info("Video stream ended")
-                    break
-
-                # OpenCV uses BGR ordering.
-                bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-
-                # Overlay telemetry text.
-                y_offset = 30
-                for key, value in latest_telemetry.items():
-                    text = f"{key}: {value}"
-                    cv2.putText(
-                        bgr, text, (10, y_offset),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1,
-                        cv2.LINE_AA,
-                    )
-                    y_offset += 20
-
-                cv2.imshow(window_name, bgr)
-
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    logger.info("Quit requested by user")
-                    break
-        finally:
-            telemetry_task.cancel()
-            try:
-                await telemetry_task
-            except asyncio.CancelledError:
-                pass
-            cv2.destroyAllWindows()
-            await self.disconnect()
