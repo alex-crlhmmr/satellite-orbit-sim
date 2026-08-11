@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
-import xml.etree.ElementTree as ET
 from zipfile import ZipFile
 
 import numpy as np

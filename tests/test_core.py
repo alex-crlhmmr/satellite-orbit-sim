@@ -7,44 +7,51 @@ atmospheric density, Sun ephemeris, and batched operations.
 """
 
 import math
+
 import numpy as np
 import pytest
 import torch
 
+from core.aerodynamics import BoxWingGeometry, lvlh_body_to_eci, quaternion_body_to_eci
+from core.atmosphere import (
+    _ecef_to_geodetic,
+    atmospheric_density,
+    drag_acceleration,
+    make_atmosphere,
+)
 from core.constants import (
-    MU_EARTH,
-    R_EARTH,
-    J2,
     AU,
     DEG2RAD,
+    J2,
     JD_J2000,
+    MU_EARTH,
+    R_EARTH,
     SECONDS_PER_DAY,
 )
 from core.elements import (
     cartesian_to_keplerian,
-    keplerian_to_cartesian,
-    true_to_eccentric_anomaly,
-    eccentric_to_mean_anomaly,
-    mean_to_eccentric_anomaly,
-    eccentric_to_true_anomaly,
     cartesian_to_roe,
+    eccentric_to_mean_anomaly,
+    eccentric_to_true_anomaly,
+    keplerian_to_cartesian,
+    mean_to_eccentric_anomaly,
+    true_to_eccentric_anomaly,
 )
 from core.frames import (
-    eci_to_ecef,
     ecef_to_eci,
+    eci_to_ecef,
     eci_to_rtn,
     gmst_from_jd,
 )
-from core.atmosphere import atmospheric_density, drag_acceleration, make_atmosphere
-from core.atmosphere import _ecef_to_geodetic
 from core.gravity import (
-    j2_acceleration, j3_acceleration, j4_acceleration,
-    j5_acceleration, j6_acceleration,
+    j2_acceleration,
+    j3_acceleration,
+    j4_acceleration,
+    j5_acceleration,
+    j6_acceleration,
 )
-from core.srp import sun_position_eci
 from core.propagator import Propagator
-from core.aerodynamics import BoxWingGeometry, lvlh_body_to_eci, quaternion_body_to_eci
-
+from core.srp import sun_position_eci
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -343,8 +350,6 @@ class TestSunSynchronous:
         a_m = R_EARTH + alt_m
         # Sun-sync inclination for 600 km (approximately 97.8 deg)
         i_ss_deg = 97.8
-        i_ss_rad = i_ss_deg * DEG2RAD
-
         r, v = _keplerian_state(a_m, 0.001, i_ss_deg, 0.0, 0.0, 0.0)
         state0 = _state_vector(r, v)
 
@@ -589,8 +594,8 @@ class TestForceModelDefinitions:
         (6, 5.40788e-7, j6_acceleration),
     ])
     def test_zonal_acceleration_is_potential_gradient(self, degree, j_value, fn):
-        from numpy.polynomial.legendre import legval
         import numpy as np
+        from numpy.polynomial.legendre import legval
 
         r = np.array([6.8e6, -1.1e6, 2.2e6], dtype=np.float64)
 
@@ -611,7 +616,6 @@ class TestForceModelDefinitions:
 
     @pytest.mark.parametrize("latitude_deg", [0.0, 30.0, 51.6, 75.0, 90.0])
     def test_wgs84_geodetic_roundtrip(self, latitude_deg):
-        import numpy as np
         from core.constants import FLATTENING
 
         lat = math.radians(latitude_deg)

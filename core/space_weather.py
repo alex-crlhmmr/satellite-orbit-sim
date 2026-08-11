@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 from dataclasses import dataclass
 from datetime import date, datetime
-import hashlib
 from pathlib import Path
 
 

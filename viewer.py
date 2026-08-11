@@ -7,13 +7,13 @@ Usage:
     python viewer.py --host 128.12.11.135 --headless
 """
 
-import asyncio
 import argparse
-import struct
+import asyncio
 import io
 import json
-import sys
+import struct
 import time
+
 import numpy as np
 from PIL import Image
 
@@ -192,8 +192,8 @@ async def run_viewer(host, video_port, telemetry_port, headless, save_frames, sa
 
 def main():
     parser = argparse.ArgumentParser(description="Orbital Simulation Viewer")
-    parser.add_argument("--host", default="128.12.11.135",
-                        help="Jetson IP address (default: 128.12.11.135)")
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="Simulation host (default: 127.0.0.1)")
     parser.add_argument("--video-port", type=int, default=9100)
     parser.add_argument("--telemetry-port", type=int, default=9101)
     parser.add_argument("--headless", action="store_true",

@@ -5,7 +5,6 @@ import pytest
 
 from core.uncertainty import rtn_basis, white_acceleration_process_noise
 
-
 STATE = np.array([7.0e6, 1.0e5, -2.0e5, -100.0, 7500.0, 500.0])
 
 

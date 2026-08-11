@@ -8,6 +8,7 @@ remain explicit inputs to the force model and its validation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 import numpy as np
 
 

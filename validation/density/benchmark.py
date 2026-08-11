@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime
 import json
-from pathlib import Path
 import sys
+from datetime import date
+from pathlib import Path
 
 import brahe as bh
 import numpy as np

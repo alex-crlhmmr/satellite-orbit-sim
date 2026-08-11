@@ -1,8 +1,9 @@
 """Main headless renderer using moderngl with EGL backend."""
 
 import os
-import numpy as np
+
 import moderngl
+import numpy as np
 
 from render.camera import Camera
 from render.earth import Earth

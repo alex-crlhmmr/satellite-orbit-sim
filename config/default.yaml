@@ -22,12 +22,7 @@ satellite:
 # Propagator settings
 propagator:
   backend: high_fidelity          # validated Brahe dynamics; 'legacy' is the fast educational model
-  dt: 10.0                        # RK4 timestep [s]
-  enable_j2: true
-  max_j_degree: 6                 # J2 through J6
-  enable_drag: true
-  enable_srp: true
-  enable_third_body: true
+  dt: 10.0                        # output/command interval [s]
   high_fidelity:
     gravity_degree: 20            # EGM2008 degree/order
     gravity_order: 20
@@ -39,6 +34,15 @@ propagator:
     # Continuous white-acceleration PSD in RTN [m²/s³]. Zero until calibrated
     # against representative tracking residuals; never invent confidence.
     process_noise_acceleration_psd_rtn: [0.0, 0.0, 0.0]
+    enable_drag: true
+    enable_srp: true
+    enable_third_body: true
+  legacy:
+    enable_j2: true
+    max_j_degree: 6               # J2 through J6
+    enable_drag: true
+    enable_srp: true
+    enable_third_body: true
     # Optional first-order attitude-aware drag geometry. When enabled, the
     # legacy constant area_mass is replaced by projected area / mass at every
     # force evaluation, assuming +X along-track / +Z nadir LVLH attitude.
@@ -46,10 +50,11 @@ propagator:
     #   box_dimensions_m: [1.0, 1.0, 1.0]
     #   panels:
     #     - {normal_body: [0.0, 0.0, 1.0], area_m2: 2.0}
-    # drag_attitude: lvlh             # or fixed_quaternion
+    # drag_attitude: lvlh           # or fixed_quaternion
     # attitude_quaternion_xyzw: [0.0, 0.0, 0.0, 1.0]
 
-# Atmosphere model (used by drag)
+# Atmosphere model used only by the legacy backend. The high-fidelity backend
+# uses Brahe NRLMSISE-00 with measured space weather.
 atmosphere:
   model: nrlmsise2                # 'nrlmsise2' (MSIS 2.x via pymsis) or 'ussa76' (legacy)
   f107: 150.0                     # daily 10.7cm solar radio flux [sfu] (typical 70-300)

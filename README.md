@@ -1,159 +1,169 @@
 # Satellite Orbit Sim
 
-High-fidelity LEO satellite orbital simulation with real-time 3D rendering and TCP streaming. Built to run headless on NVIDIA Jetson Orin and stream video + telemetry to remote clients.
+Validated low-Earth-orbit propagation with headless 3D rendering and LAN
+telemetry/video streaming. The supported default is a high-fidelity Brahe
+backend; a compact local propagator remains available for education and the
+experimental thrust/RL work.
 
-The default configuration uses the validated research dynamics profile; see
-[the dynamics verification status](docs/dynamics_status.md) for its model
-inventory and remaining limitations.
+## Default dynamics
 
-Independent Orekit cross-validation, reproducible scenarios, and the latest
-error report are under [`validation/`](validation/README.md).
-Evidence-gated benchmarks against real Sentinel-1A and Swarm-A precise orbits are under
-[`validation/real_data/`](validation/real_data/README.md).
-Direct force-level validation against GRACE-FO accelerometer-derived density is
-under [`validation/density/`](validation/density/README.md).
+The `high_fidelity` backend uses:
 
-![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
-![PyTorch](https://img.shields.io/badge/pytorch-2.0%2B-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+- EGM2008 spherical harmonics, 20×20 by default
+- IERS Earth orientation and full GCRF/ITRF transformations
+- NRLMSISE-00 with measured space weather
+- JPL DE440s Sun/Moon ephemerides
+- conical eclipses and solar radiation pressure
+- solid Earth and pole tides
+- relativistic acceleration
+- adaptive RKF78 integration and state-transition/covariance propagation
 
-## Features
+The exact supported and missing effects are tracked in
+[docs/dynamics_status.md](docs/dynamics_status.md). Do not infer support from
+settings belonging to the legacy backend: backend-specific configuration is
+separated and unsupported high-fidelity keys fail loudly.
 
-- **High-fidelity orbital mechanics** — J2-J6 zonal harmonics, NRLMSISE-2 atmospheric drag (with a USSA76 fallback), solar radiation pressure with cylindrical shadow, Sun/Moon third-body perturbations
-- **RK4 propagator** — Fixed-step integration in float64 with individually togglable force models
-- **3D headless rendering** — Earth with NASA Blue Marble day/night textures, orbit trail, satellite marker via moderngl + EGL (no display server needed)
-- **Real-time streaming** — TCP server broadcasts JPEG video frames and JSON telemetry to connected clients
-- **Remote viewer** — OpenCV-based client with telemetry overlay, frame capture, and headless recording mode
-- **Multiple camera modes** — Tracking (follows satellite), fixed inertial, or split-screen (both)
+## Evidence
 
-## Architecture
+- Independent Brahe/Orekit comparisons over five orbit regimes and five
+  force-model profiles: [validation/](validation/README.md)
+- Frozen Sentinel-1A and Swarm-A precise-orbit benchmarks:
+  [validation/real_data/](validation/real_data/README.md)
+- GRACE-FO accelerometer-density benchmark with an untouched storm test:
+  [validation/density/](validation/density/README.md)
+- 68 tests covering physics, configuration, streaming, uncertainty and data
+  protocols
 
-```
-core/           Physics engine (gravity, drag, SRP, third-body, propagator)
-env/            Experimental RL code (not part of the supported entry point)
-render/         moderngl/EGL 3D renderer with GLSL shaders
-stream/         TCP streaming server and protocol
-config/         YAML configuration
-assets/         NASA Blue Marble textures
-tests/          Validation test suite (19 tests)
-main.py         Simulation entry point
-viewer.py       Remote viewer client
-```
+On the frozen GRACE-FO October storm interval, raw NRLMSISE-00 density MAPE is
+92.56%, an April-trained static scale reaches 59.01%, and the validation-selected
+one-step estimator reaches 11.98%. This is a direct density benchmark, not a
+claim that ordinary satellites measure density onboard.
 
-## Quick Start
+## Installation
 
-### On the Jetson (or any Linux machine with GPU)
+Python 3.12 is the supported version. `pyproject.toml` is canonical and
+`uv.lock` pins the reproducible development environment.
+
+### macOS or ordinary Linux
 
 ```bash
-pip install -r requirements.txt
+# Reproducible development environment
+uv sync --all-extras
+
+# Or with pip
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[all,dev]"
+```
+
+Physics-only installations can omit the optional UI and experimental code:
+
+```bash
+python -m pip install -e .
+```
+
+Available extras are `legacy`, `render`, `viewer`, `rl`, `dev`, and `all`.
+
+### NVIDIA Jetson
+
+Use Python 3.12 only if it is supported by the installed JetPack release.
+Install NVIDIA's JetPack-compatible PyTorch wheel first; do not allow pip or
+uv to replace it with a generic CUDA wheel. Then install this project:
+
+```bash
+python -m pip install -e ".[all]"
+```
+
+Confirm `python -c "import torch; print(torch.__version__)"` still reports the
+NVIDIA-provided build. Jetson/PyTorch compatibility is controlled by NVIDIA,
+so a universal wheel is intentionally not pinned here.
+
+## Run
+
+On the simulation host:
+
+```bash
 python main.py
+# or: satellite-orbit-sim
 ```
 
-This starts the simulation with default config (ISS-like orbit at 400 km, 51.6° inclination). It exposes binary video on 9100, binary telemetry on 9101, and a browser viewer on 8080.
+The default starts the renderer and exposes:
 
-### Remote Viewing
+- browser viewer: `http://<HOST_IP>:8080`
+- binary video: TCP 9100
+- binary telemetry: TCP 9101
 
-The simplest remote viewer needs only a browser:
-
-```text
-http://<JETSON_IP>:8080
-```
-
-Alternatively, install the Python dependencies on the remote machine and run:
+Anyone on the same trusted LAN can access the browser URL because the default
+bind address is `0.0.0.0`. There is no authentication or TLS. On an untrusted
+network, set `stream.bind_host: 127.0.0.1` and tunnel it:
 
 ```bash
-python viewer.py --host <JETSON_IP>
+ssh -L 8080:localhost:8080 user@HOST_IP
 ```
 
-If ports are firewalled, use SSH tunneling:
+Useful commands:
 
 ```bash
-ssh -L 8080:localhost:8080 -L 9100:localhost:9100 -L 9101:localhost:9101 user@<JETSON_IP>
-# Browser: http://localhost:8080
-python viewer.py --host localhost
+python main.py --steps 5000
+python main.py --no-render --no-stream --steps 1440
+python main.py --camera tracking
+python main.py --camera fixed
+python main.py --camera split
+python main.py --camera ground_track
+python main.py --camera nadir
+python main.py --camera horizon
+python main.py --camera onboard
+
+python viewer.py --host HOST_IP
+python viewer.py --host HOST_IP --headless --save-telemetry
 ```
-
-### Options
-
-```bash
-# Simulation
-python main.py --camera split          # Split-screen: tracking + inertial views
-python main.py --camera fixed          # Fixed inertial camera
-python main.py --steps 5000            # Run for 5000 steps then stop
-python main.py --no-render --no-stream # Propagation only (headless, no streaming)
-python main.py --config path/to/config.yaml
-
-# Viewer
-python viewer.py --host localhost --headless          # Terminal-only (no OpenCV window)
-python viewer.py --host localhost --save-frames        # Save every 30th frame as PNG
-python viewer.py --host localhost --save-telemetry     # Record telemetry to JSONL
-```
-
-## Physics Models
-
-| Model | Implementation | Reference |
-|-------|---------------|-----------|
-| Gravity | J2-J6 zonal harmonics, closed-form Cartesian | Vallado, *Fundamentals of Astrodynamics* |
-| Drag | NRLMSISE-2 via pymsis; optional 28-band USSA76 fallback | NRLMSISE-2 / Vallado Table 8-4 |
-| SRP | Solar radiation pressure + cylindrical shadow | Montenbruck & Gill |
-| Third-body | Sun (Meeus) + Moon (Brown's theory) | Meeus, *Astronomical Algorithms* |
-| Integrator | RK4 fixed-step, dt=10s, float64 | — |
-
-## Validation
-
-Run the test suite:
-
-```bash
-python -m pytest tests/ -v
-```
-
-Key results from 19 tests:
-- Two-body energy conservation: relative error < 4e-11 over 100 orbits
-- Kepler period return: < 0.05 m position error
-- J2 RAAN drift: < 1% error vs analytical prediction
-- Sun-synchronous orbit: correct ~0.9856°/day RAAN precession
 
 ## Configuration
 
-All parameters are set in `config/default.yaml`:
+The default file is [config/default.yaml](config/default.yaml). Major sections:
 
-- **Orbit** — Keplerian elements (SMA, eccentricity, inclination, RAAN, AoP, true anomaly)
-- **Satellite** — Mass, drag coefficient, reflectivity, area-to-mass ratio, max thrust
-- **Propagator** — Timestep, enable/disable individual perturbations, max J degree
-- **Render** — Resolution, FPS, camera mode, trail length, texture paths
-- **Stream** — Bind address, browser/video/telemetry ports, JPEG quality
-- **Environment** — Simulation step duration and maximum steps
+- `orbit`: initial osculating Keplerian elements
+- `satellite`: mass, coefficients, drag area and illuminated area
+- `propagator.high_fidelity`: supported Brahe research settings
+- `propagator.legacy`: local RK4/J2–J6 and optional box-wing settings
+- `atmosphere`: legacy-backend MSIS-2/USSA76 settings only
+- `render` and `stream`: UI and network settings
+- `environment`: experimental RL episode settings
 
-## RL Status
+The default satellite is a generic 100 kg, 1 m² ISS-orbit scenario—not a
+specific flight vehicle. Change the mass, areas and coefficients for the
+spacecraft being studied.
 
-The `env/` package is experimental and intentionally deferred. It is not
-connected to `main.py` and should not currently be treated as a supported API.
+## Quality checks
 
-## Streaming Protocol
-
-Binary TCP protocol with 21-byte header:
-
+```bash
+uv run pytest -q
+uv run ruff check .
 ```
-[4B magic "ORBT"][1B channel][4B payload_len][4B seq][8B sim_time][payload]
+
+CI runs unit tests, independent cross-validation, precise-orbit benchmarks,
+atmosphere comparisons and the GRACE-FO density gate. Large source datasets are
+downloaded outside the repository and verified against committed SHA-256
+manifests.
+
+## Repository map
+
+```text
+core/          Dynamics, atmosphere, aerodynamics and uncertainty
+render/        EGL/moderngl renderer and camera modes
+stream/        Browser and binary streaming
+env/           Experimental Gymnasium environment (optional)
+validation/    Independent and real-data evidence pipelines
+tests/         Unit and evidence-integrity tests
+config/        Runtime configuration
+main.py        Supported simulation entry point
+viewer.py      Optional OpenCV/binary-protocol viewer
 ```
 
-- Channel 0x01: JPEG video frame
-- Channel 0x02: JSON telemetry (orbital elements, altitude, speed, position/velocity)
+## Scope
 
-## Hardware
-
-Developed and tested on:
-- NVIDIA Jetson Orin 64GB (JetPack 6, CUDA 12.6)
-- ARM v8, 8 cores
-- Headless GPU rendering via EGL
-
-## Dependencies
-
-- PyTorch >= 2.0 (public tensor API; propagation currently runs on NumPy/CPU)
-- moderngl >= 5.8 (with EGL backend)
-- Gymnasium >= 0.29
-- NumPy, Pillow, PyYAML, pymsis, Gymnasium, OpenCV
-
-The default server binds to `0.0.0.0` so another machine on the LAN can view
-it. The streams have no authentication or TLS; use `bind_host: 127.0.0.1` and
-an SSH tunnel on untrusted networks.
+This is a research-grade LEO orbit simulator, not a complete spacecraft digital
+twin or flight-qualified navigation system. Attitude dynamics, thermal/power
+subsystems, validated neutral winds, albedo/infrared pressure, maneuver support
+in the research backend and operational measurement filtering are not claimed.
+The RL package is experimental and is not connected to `main.py`.

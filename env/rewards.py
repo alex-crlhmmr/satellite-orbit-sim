@@ -11,8 +11,9 @@ Reward types:
     - deorbit: Reward altitude decrease toward a target altitude
 """
 
-import torch
 from typing import Optional
+
+import torch
 
 
 def station_keeping_reward(

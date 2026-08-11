@@ -7,9 +7,10 @@ path; ``moon_position_eci`` returns a numpy (3,) float64 array.
 """
 
 import math
+
 import numpy as np
 
-from .constants import MU_SUN, MU_MOON, JD_J2000, DAYS_PER_CENTURY, DEG2RAD
+from .constants import DAYS_PER_CENTURY, DEG2RAD, JD_J2000, MU_MOON, MU_SUN
 
 
 def moon_position_eci(jd: float) -> np.ndarray:
@@ -44,7 +45,6 @@ def moon_position_eci(jd: float) -> np.ndarray:
              - 0.0001536 * T * T
              + T**3 / 24490000.0)
 
-    L_prime_rad = L_prime * DEG2RAD
     l_prime_rad = l_prime * DEG2RAD
     D_rad = D * DEG2RAD
     F_rad = F * DEG2RAD

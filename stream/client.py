@@ -14,8 +14,6 @@ import numpy as np
 from PIL import Image
 
 from .protocol import (
-    CHANNEL_TELEMETRY,
-    CHANNEL_VIDEO,
     HEADER_SIZE,
     decode_header,
 )

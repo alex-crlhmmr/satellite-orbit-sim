@@ -1,7 +1,7 @@
 """Tests for reproducible empirical-atmosphere inputs."""
 
-from datetime import datetime
 import hashlib
+from datetime import datetime
 
 import pytest
 

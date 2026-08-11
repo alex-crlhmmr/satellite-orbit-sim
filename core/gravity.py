@@ -8,7 +8,8 @@ All functions operate on (B, 3) or (3,) float64 NumPy arrays in ECI.
 """
 
 import numpy as np
-from .constants import MU_EARTH, R_EARTH, J2, J3, J4, J5, J6
+
+from .constants import J2, J3, J4, J5, J6, MU_EARTH, R_EARTH
 
 
 def j2_acceleration(r: np.ndarray, mu: float = MU_EARTH, re: float = R_EARTH) -> np.ndarray:

@@ -4,9 +4,11 @@ Orbital element conversions: Cartesian <-> Keplerian, anomaly solvers, ROE.
 All functions use float64 tensors and support batched inputs.
 """
 
-import torch
 import math
-from .constants import MU_EARTH, DEG2RAD
+
+import torch
+
+from .constants import MU_EARTH
 from .frames import perifocal_to_eci_matrix
 
 
@@ -102,9 +104,11 @@ def cartesian_to_keplerian(
     # Handle circular-equatorial: use true longitude
     cos_l = r[..., 0] / r_mag.squeeze(-1)
     cos_l = torch.clamp(cos_l, -1.0, 1.0)
-    l = torch.acos(cos_l)
-    l = torch.where(r[..., 1] < 0, 2.0 * math.pi - l, l)
-    nu = torch.where(circular & equatorial, l, nu)
+    true_longitude = torch.acos(cos_l)
+    true_longitude = torch.where(
+        r[..., 1] < 0, 2.0 * math.pi - true_longitude, true_longitude
+    )
+    nu = torch.where(circular & equatorial, true_longitude, nu)
 
     result = {"a": a, "e": e, "i": inc, "raan": raan, "argp": argp, "nu": nu}
 

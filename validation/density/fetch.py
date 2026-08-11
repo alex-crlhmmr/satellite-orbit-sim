@@ -2,8 +2,8 @@
 """Download and verify the frozen GRACE-FO density corpus."""
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 from urllib.request import urlopen
 
 import yaml
