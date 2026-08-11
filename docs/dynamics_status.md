@@ -15,6 +15,8 @@ The simulator has two deliberately separate dynamics profiles.
 - adaptive RKF78 integration with configured absolute/relative tolerances
 - IERS solid Earth and pole tides, and relativistic acceleration
 - state transition matrix and 6x6 covariance propagation
+- optional continuous white-acceleration process noise in RTN; it defaults to
+  zero until a representative tracking-data campaign calibrates its PSD
 
 Brahe caches EOP, space-weather, and ephemeris data under `~/.cache/brahe`.
 The first research-profile start therefore needs internet access; later starts

@@ -36,6 +36,9 @@ propagator:
     abs_tol: 1.0e-6               # adaptive RKF78 tolerances
     rel_tol: 1.0e-11
     max_step: 60.0
+    # Continuous white-acceleration PSD in RTN [m²/s³]. Zero until calibrated
+    # against representative tracking residuals; never invent confidence.
+    process_noise_acceleration_psd_rtn: [0.0, 0.0, 0.0]
 
 # Atmosphere model (used by drag)
 atmosphere:
