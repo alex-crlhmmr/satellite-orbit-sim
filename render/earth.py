@@ -9,13 +9,13 @@ try:
 except ImportError:
     Image = None
 
-from core.constants import R_EARTH
+from core.constants import R_EARTH, R_EARTH_POLAR
 
 
 class Earth:
-    """Textured Earth sphere with day/night shading.
+    """Textured WGS-84 ellipsoid with day/night shading.
 
-    Generates a UV sphere, loads (or creates) day and night textures, and
+    Generates an ellipsoid, loads (or creates) day and night textures, and
     renders via moderngl with the supplied shader program.
     """
 
@@ -28,9 +28,11 @@ class Earth:
             lon_divs: Number of longitude divisions for the UV sphere.
         """
         self.radius = R_EARTH
-        vertices, indices = self._generate_sphere(lat_divs, lon_divs)
+        self.polar_radius = R_EARTH_POLAR
+        vertices, indices = self._generate_ellipsoid(lat_divs, lon_divs)
         self.num_indices = len(indices)
         self._create_buffers(ctx, vertices, indices)
+        self._vao = None
 
         self.day_texture = None
         self.night_texture = None
@@ -39,8 +41,8 @@ class Earth:
     # Mesh generation
     # ------------------------------------------------------------------
 
-    def _generate_sphere(self, lat_divs: int, lon_divs: int):
-        """Generate a UV sphere mesh.
+    def _generate_ellipsoid(self, lat_divs: int, lon_divs: int):
+        """Generate a geodetically parameterized WGS-84 ellipsoid mesh.
 
         Returns:
             vertices: ndarray of shape (N, 8) — x,y,z, nx,ny,nz, u,v
@@ -48,24 +50,30 @@ class Earth:
         """
         verts = []
         for i in range(lat_divs + 1):
-            theta = np.pi * i / lat_divs  # 0 .. pi (north to south)
-            sin_theta = np.sin(theta)
-            cos_theta = np.cos(theta)
+            latitude = np.pi / 2.0 - np.pi * i / lat_divs
+            cos_latitude = np.cos(latitude)
+            sin_latitude = np.sin(latitude)
             v_coord = i / lat_divs
 
             for j in range(lon_divs + 1):
-                phi = 2.0 * np.pi * j / lon_divs  # 0 .. 2pi
-                sin_phi = np.sin(phi)
-                cos_phi = np.cos(phi)
+                # Equirectangular maps run from -180 degrees at the left edge
+                # through Greenwich at the centre to +180 at the right edge.
+                longitude = -np.pi + 2.0 * np.pi * j / lon_divs
+                sin_longitude = np.sin(longitude)
+                cos_longitude = np.cos(longitude)
                 u_coord = j / lon_divs
 
-                x = self.radius * sin_theta * cos_phi
-                y = self.radius * sin_theta * sin_phi
-                z = self.radius * cos_theta
+                x = self.radius * cos_latitude * cos_longitude
+                y = self.radius * cos_latitude * sin_longitude
+                z = self.polar_radius * sin_latitude
 
-                nx = sin_theta * cos_phi
-                ny = sin_theta * sin_phi
-                nz = cos_theta
+                normal = np.array([
+                    x / self.radius**2,
+                    y / self.radius**2,
+                    z / self.polar_radius**2,
+                ])
+                normal /= np.linalg.norm(normal)
+                nx, ny, nz = normal
 
                 verts.append([x, y, z, nx, ny, nz, u_coord, v_coord])
 
@@ -177,7 +185,7 @@ class Earth:
     # ------------------------------------------------------------------
 
     def render(self, prog, vp_matrix: np.ndarray, model_matrix: np.ndarray,
-               sun_dir, camera_pos):
+               sun_dir):
         """Render the Earth sphere.
 
         Args:
@@ -185,7 +193,6 @@ class Earth:
             vp_matrix: 4x4 view-projection matrix (column-major float32).
             model_matrix: 4x4 model matrix (column-major float32).
             sun_dir: Normalised sun direction in world space (3-element).
-            camera_pos: Camera position in world coordinates (3-element).
         """
         mvp = vp_matrix @ model_matrix
 
@@ -194,8 +201,6 @@ class Earth:
 
         sun_dir = np.asarray(sun_dir, dtype=np.float32)
         prog["sun_direction"].value = tuple(sun_dir)
-        camera_pos = np.asarray(camera_pos, dtype=np.float32)
-        prog["camera_position"].value = tuple(camera_pos)
 
         if self.day_texture is not None:
             self.day_texture.use(location=0)
@@ -204,29 +209,27 @@ class Earth:
             self.night_texture.use(location=1)
             prog["night_texture"].value = 1
 
-        vao = prog.ctx.vertex_array(
-            prog,
-            [(self.vbo, "3f 3f 2f", "position", "normal", "texcoord")],
-            index_buffer=self.ibo,
-        )
-        vao.render()
-        vao.release()
+        if self._vao is None:
+            self._vao = prog.ctx.vertex_array(
+                prog,
+                [(self.vbo, "3f 3f 2f", "position", "normal", "texcoord")],
+                index_buffer=self.ibo,
+            )
+        self._vao.render()
 
     @staticmethod
-    def get_model_matrix(gmst: float) -> np.ndarray:
-        """Build a 4x4 rotation matrix for Earth orientation.
+    def get_model_matrix(itrf_to_gcrf: np.ndarray) -> np.ndarray:
+        """Embed the full ITRF-to-GCRF rotation in a 4x4 model matrix.
 
         Args:
-            gmst: Greenwich Mean Sidereal Time angle [rad].
+            itrf_to_gcrf: Orthogonal 3x3 Earth-orientation matrix.
 
         Returns:
             4x4 column-major rotation matrix (float32).
         """
-        c = np.cos(gmst)
-        s = np.sin(gmst)
+        rotation = np.asarray(itrf_to_gcrf, dtype=np.float64)
+        if rotation.shape != (3, 3):
+            raise ValueError("ITRF-to-GCRF rotation must have shape (3, 3)")
         m = np.eye(4, dtype=np.float32)
-        m[0, 0] = c
-        m[0, 1] = s
-        m[1, 0] = -s
-        m[1, 1] = c
+        m[:3, :3] = rotation
         return m

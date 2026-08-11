@@ -68,6 +68,16 @@ class Renderer:
 
         # Reusable satellite point-sprite buffer (single vertex)
         self._sat_vbo = self.ctx.buffer(reserve=4 * 4)  # vec3 position + float alpha
+        self._sat_vao = self.ctx.vertex_array(
+            self.orbit_prog,
+            [(self._sat_vbo, "3f 1f", "position", "alpha")],
+        )
+        self._trail_capacity = max(2, int(self.config.get("trail_length", 500)))
+        self._trail_vbo = self.ctx.buffer(reserve=self._trail_capacity * 4 * 4)
+        self._trail_vao = self.ctx.vertex_array(
+            self.orbit_prog,
+            [(self._trail_vbo, "3f 1f", "position", "alpha")],
+        )
 
     # ------------------------------------------------------------------
     # Shader loading
@@ -106,17 +116,17 @@ class Renderer:
         """
         self.camera_mode = mode
 
-    def _render_scene(self, sat_positions, sun_dir, gmst, trail_positions, vp,
+    def _render_scene(self, sat_positions, sun_dir, earth_rotation, trail_positions, vp,
                       show_orbit=True):
         """Draw the full scene (Earth + trail + satellites) with a given VP matrix."""
-        self._draw_earth(gmst, sun_dir, vp, self.camera._eye)
+        self._draw_earth(earth_rotation, sun_dir, vp)
         if show_orbit and trail_positions is not None:
             self._draw_trail(trail_positions, vp)
         if show_orbit:
             for pos in sat_positions:
                 self._draw_satellite(pos, vp)
 
-    def render_frame(self, sat_positions, sun_pos, gmst: float,
+    def render_frame(self, sat_positions, sun_pos, earth_rotation,
                      trail_positions=None, sat_velocity=None) -> np.ndarray:
         """Render a complete frame and return the pixel data.
 
@@ -124,7 +134,7 @@ class Renderer:
             sat_positions: Satellite ECI positions — a single (3,) array or
                 an (N, 3) array for multiple satellites [m].
             sun_pos: Sun position in ECI [m] (used to derive direction).
-            gmst: Greenwich Mean Sidereal Time angle [rad].
+            earth_rotation: Full 3x3 ITRF-to-GCRF orientation matrix.
             trail_positions: Optional (M, 3) array of past positions for
                 drawing the orbit trail.
 
@@ -159,7 +169,7 @@ class Renderer:
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
             self._render_scene(
-                sat_positions, sun_dir, gmst, trail_positions, vp,
+                sat_positions, sun_dir, earth_rotation, trail_positions, vp,
                 show_orbit=(mode == 'split'),
             )
 
@@ -172,7 +182,7 @@ class Renderer:
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
             self._render_scene(
-                sat_positions, sun_dir, gmst, trail_positions, vp,
+                sat_positions, sun_dir, earth_rotation, trail_positions, vp,
                 show_orbit=(mode == 'split'),
             )
 
@@ -196,7 +206,9 @@ class Renderer:
             else:
                 self.camera.track_satellite(sat_positions[0])
             vp = self.camera.vp_matrix()
-            self._render_scene(sat_positions, sun_dir, gmst, trail_positions, vp)
+            self._render_scene(
+                sat_positions, sun_dir, earth_rotation, trail_positions, vp
+            )
 
         # Read pixels
         raw = self.fbo.read(components=3)
@@ -209,16 +221,18 @@ class Renderer:
     # Internal draw helpers
     # ------------------------------------------------------------------
 
-    def _draw_earth(self, gmst: float, sun_dir, vp: np.ndarray, camera_pos):
+    def _draw_earth(self, earth_rotation, sun_dir, vp: np.ndarray):
         """Render the Earth sphere."""
-        model = Earth.get_model_matrix(gmst)
-        self.earth.render(self.earth_prog, vp, model, sun_dir, camera_pos)
+        model = Earth.get_model_matrix(earth_rotation)
+        self.earth.render(self.earth_prog, vp, model, sun_dir)
 
     def _draw_trail(self, trail_positions, vp: np.ndarray):
         """Render the orbit trail as a fading line strip."""
         trail = np.asarray(trail_positions, dtype=np.float32)
         if trail.ndim != 2 or trail.shape[0] < 2:
             return
+        if trail.shape[0] > self._trail_capacity:
+            trail = trail[-self._trail_capacity:]
 
         n = trail.shape[0]
         # Alpha ramps from 0 (oldest) to 1 (newest)
@@ -229,17 +243,11 @@ class Renderer:
         data[:, :3] = trail
         data[:, 3] = alphas
 
-        vbo = self.ctx.buffer(data.tobytes())
-        vao = self.ctx.vertex_array(
-            self.orbit_prog,
-            [(vbo, "3f 1f", "position", "alpha")],
-        )
+        self._trail_vbo.write(data.tobytes())
 
         self.orbit_prog["mvp"].write(vp.astype(np.float32).T.tobytes())
 
-        vao.render(moderngl.LINE_STRIP)
-        vao.release()
-        vbo.release()
+        self._trail_vao.render(moderngl.LINE_STRIP, vertices=n)
 
     def _draw_satellite(self, sat_pos, vp: np.ndarray):
         """Render a satellite as a bright point sprite."""
@@ -250,15 +258,10 @@ class Renderer:
         data[3] = 1.0
 
         self._sat_vbo.write(data.tobytes())
-        vao = self.ctx.vertex_array(
-            self.orbit_prog,
-            [(self._sat_vbo, "3f 1f", "position", "alpha")],
-        )
         self.orbit_prog["mvp"].write(vp.astype(np.float32).T.tobytes())
 
         self.ctx.point_size = 6.0
-        vao.render(moderngl.POINTS)
-        vao.release()
+        self._sat_vao.render(moderngl.POINTS)
 
     # ------------------------------------------------------------------
     # Cleanup
@@ -272,9 +275,13 @@ class Renderer:
             self.fbo,
             self.earth_prog,
             self.orbit_prog,
+            self.earth._vao,
             self.earth.vbo,
             self.earth.ibo,
+            self._sat_vao,
             self._sat_vbo,
+            self._trail_vao,
+            self._trail_vbo,
         ):
             try:
                 resource.release()

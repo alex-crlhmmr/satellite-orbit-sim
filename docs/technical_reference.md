@@ -127,8 +127,21 @@ satellite-orbit-sim --config config/legacy.yaml
 ## Rendering and cameras
 
 The renderer uses moderngl with an EGL standalone context and an off-screen RGB
-plus depth framebuffer. It renders textured Earth, illumination/night blending,
-orbit trail and satellite marker, then reads the image for JPEG streaming.
+plus depth framebuffer. Earth geometry is the WGS-84 reference ellipsoid. The
+model transform uses Brahe's full IERS ITRF-to-GCRF rotation, and direct solar
+illumination uses the same DE440s ephemeris family as the research dynamics.
+The day and night rasters are documented NASA composites, not epoch-specific
+weather or radiance. They provide colour only: no terrain, clouds, weather or
+stars are procedurally invented. The geometry-grounded shader has no artificial
+night-side daylight floor or uncalibrated atmospheric rim. It is not a
+radiometrically calibrated camera model: the two composite rasters do not share
+physical radiance units, and atmospheric scattering/refraction is not yet
+rendered.
+
+Earth, trail and satellite GPU objects are persistent across frames; only
+their dynamic contents and uniforms are updated before framebuffer readback.
+Asset provenance, acquisition periods and checksums are recorded in
+[`assets/README.md`](../assets/README.md).
 
 Supported modes:
 

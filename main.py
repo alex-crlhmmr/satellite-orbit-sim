@@ -20,9 +20,9 @@ import yaml
 
 from core.constants import DEG2RAD, M2KM, MU_EARTH, R_EARTH
 from core.elements import cartesian_to_keplerian, keplerian_to_cartesian
-from core.frames import datetime_to_jd, gmst_from_seconds
+from core.frames import datetime_to_jd
 from core.propagator import Propagator
-from core.srp import sun_position_eci
+from render.ephemeris import scene_ephemeris
 
 
 def _merge_config(base: dict, override: dict) -> dict:
@@ -272,14 +272,13 @@ async def run_simulation(config: dict):
             # Render a video frame when EGL is available.
             frame = None
             if renderer is not None:
-                gmst = gmst_from_seconds(epoch_jd, sim_time)
-                sun_pos = sun_position_eci(epoch_jd + sim_time / 86400.0)
+                scene = scene_ephemeris(epoch_jd + sim_time / 86400.0)
 
                 trail_array = np.array(list(trail)) if len(trail) > 1 else None
                 frame = renderer.render_frame(
                     sat_positions=state[:3].numpy(),
-                    sun_pos=sun_pos.numpy(),
-                    gmst=gmst,
+                    sun_pos=scene.sun_position_gcrf_m,
+                    earth_rotation=scene.itrf_to_gcrf,
                     trail_positions=trail_array,
                     sat_velocity=state[3:6].numpy(),
                 )

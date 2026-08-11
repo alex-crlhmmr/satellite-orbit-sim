@@ -93,6 +93,8 @@ render:
   trail_length: 500               # Number of trail points to keep
   earth_day_texture: assets/earth_day.jpg
   earth_night_texture: assets/earth_night.jpg
+  # Static NASA composites; see assets/README.md for provenance and time limits.
+  # No terrain displacement, live weather, clouds, or synthetic stars are shown.
   camera_mode: tracking           # 'tracking' (follows sat) or 'fixed' (inertial overview)
 
 # Streaming settings
