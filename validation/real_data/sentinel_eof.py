@@ -51,4 +51,3 @@ def read_eof(path: Path) -> OrbitArc:
     if not np.isfinite(array).all():
         raise ValueError("EOF contains non-finite state values")
     return OrbitArc(tuple(epochs), array)
-

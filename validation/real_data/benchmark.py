@@ -18,6 +18,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from validation.real_data.sentinel_eof import OrbitArc, read_eof
+from validation.real_data.swarm_sp3 import read_sp3_zip
 from validation.real_data.fetch import sha256
 
 
@@ -126,17 +127,18 @@ def fit_effective_area(training: list[tuple[np.ndarray, np.ndarray, np.ndarray]]
 def write_report(output: Path, payload: dict) -> None:
     output.mkdir(parents=True, exist_ok=True)
     (output / "results.json").write_text(json.dumps(payload, indent=2) + "\n")
-    lines = ["# Sentinel-1A drag validation", "",
+    lines = [f"# {payload['dataset_name']} drag validation", "",
              f"Evidence gate: **{'PASS' if payload['passed'] else 'FAIL'}**", "",
              f"Fitted effective drag area: {payload['fitted_drag_area_m2']:.4f} m²", "",
-             f"Equivalent density/ballistic scale versus the 10 m² nominal baseline: "
+             f"Equivalent density/ballistic scale versus the nominal baseline: "
              f"{payload['effective_drag_scale']:.4f}", "",
+             f"Fitted effective CdA/m: {payload['fitted_cda_over_mass_m2_per_kg']:.6f} m²/kg", "",
              "> This is an effective drag scale, not a recovered physical surface area. "
              "It absorbs density, attitude, coefficient, and unmodelled-force errors.", "",
              "| Arc | Split | Regime | Model | RMS 3D | RMS along-track | Final 3D |",
              "|---|---|---|---:|---:|---:|---:|"]
     for row in payload["metrics"]:
-        arc = row["filename"].split("_V", 1)[-1][:8]
+        arc = row["filename"]
         lines.append(f"| {arc} | {row['split']} | {row['regime']} | {row['model']} | "
                      f"{row['rms_position_m']:.3f} m | {row['rms_along_track_m']:.3f} m | "
                      f"{row['final_position_m']:.3f} m |")
@@ -158,7 +160,8 @@ def main() -> None:
         source = args.data / entry["filename"]
         if sha256(source) != entry["sha256"]:
             raise RuntimeError(f"manifest checksum mismatch: {source}")
-        arc = read_eof(source).downsample(
+        reader = read_sp3_zip if manifest["dataset"].get("format") == "swarm_sp3_zip" else read_eof
+        arc = reader(source).downsample(
             protocol["sample_interval_s"], protocol["arc_duration_s"]
         )
         arcs.append((entry, arc))
@@ -193,8 +196,13 @@ def main() -> None:
               limits["fitted_drag_area_bounds_m2"][0] < fitted_area < limits["fitted_drag_area_bounds_m2"][1])
     payload = {
         "protocol_version": protocol["protocol_version"], "passed": bool(passed),
+        "dataset_name": manifest["dataset"]["name"],
         "fitted_drag_area_m2": fitted_area, "validation_rms_improvement_fraction": validation_gain,
         "effective_drag_scale": fitted_area / nominal_area,
+        "fitted_cda_over_mass_m2_per_kg": (
+            protocol["spacecraft"]["drag_coefficient"] * fitted_area /
+            protocol["spacecraft"]["mass_kg"]
+        ),
         "dataset_files": [{"filename": x["filename"], "sha256": x["sha256"],
                            "split": x["split"], "regime": x["regime"]}
                           for x in manifest["files"]],

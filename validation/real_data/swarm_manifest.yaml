@@ -1,0 +1,39 @@
+dataset:
+  name: Swarm-A reduced-dynamic precise orbits
+  provider: ESA Swarm Data Access
+  format: swarm_sp3_zip
+  download_url_template: https://swarm-diss.eo.esa.int/?do=download&file={path}
+  remote_path: swarm/Level2daily/Latest_baselines/POD/RD/Sat_A/
+  frame: ITRF/Earth-fixed
+  time_system: GPS (converted to UTC using the accompanying product header)
+  sampling_s: 10
+  stated_accuracy: few-centimetre 3D position accuracy
+  citation_url: https://swarm-disc.github.io/product-catalogue-tools/SW_SP3xCOM_2_.html
+
+# Frozen before running the benchmark.  The May and October intervals mirror
+# the independent storm regimes used by the Sentinel-1 benchmark.
+files:
+  - split: train
+    regime: quiet
+    filename: SW_OPER_SP3ACOM_2__20240331T235942_20240401T235942_0201.ZIP
+    sha256: d2851e3be33e841929a4e5394cd49bf5874f81b630834531798e912b375de7f2
+  - split: train
+    regime: quiet
+    filename: SW_OPER_SP3ACOM_2__20240401T235942_20240402T235942_0201.ZIP
+    sha256: 8cb75d19912f3f3fc6c87b5a047f3fd1db2a4dcbd4dcda34bd60f72f9e1301e2
+  - split: train
+    regime: quiet
+    filename: SW_OPER_SP3ACOM_2__20240402T235942_20240403T235942_0201.ZIP
+    sha256: 4f6e0f37763f6e66a3008bdc7672a14cd87214270e414d050e05eef60931c564
+  - split: validation
+    regime: quiet
+    filename: SW_OPER_SP3ACOM_2__20240415T235942_20240416T235942_0201.ZIP
+    sha256: ab063e687c013fcafe264e788eb23ac9e38b339b502f9c14b3ded4f580c33e3e
+  - split: validation
+    regime: storm
+    filename: SW_OPER_SP3ACOM_2__20240510T235942_20240511T235942_0201.ZIP
+    sha256: 16303e83b796a00e4bfaa7a75b32c7b71c520e60810d47b56d78dbff8235b76a
+  - split: test
+    regime: storm
+    filename: SW_OPER_SP3ACOM_2__20241010T235942_20241011T235942_0201.ZIP
+    sha256: 1648c71371d260102ce6bdb97c609782a96eb59705814898cdc5488fe9210026
