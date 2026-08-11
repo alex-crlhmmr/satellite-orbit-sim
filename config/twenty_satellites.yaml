@@ -1,0 +1,68 @@
+# Twenty-spacecraft Walker-style LEO visualization scenario.
+# Four orbital planes contain five evenly spaced spacecraft each. Values
+# inherit from config/default.yaml unless overridden here.
+
+environment:
+  env_dt: 5.0
+  max_steps: 0
+
+render:
+  camera_mode: fixed
+  camera_target: plane-01-sat-01
+  # Twenty independent high-fidelity propagators sustain about 10 Hz on Jetson.
+  fps: 10
+  trail_length: 900
+
+stream:
+  video_port: 9110
+  telemetry_port: 9111
+  http_port: 8084
+  jpeg_quality: 75
+  webrtc_enabled: true
+  webrtc_port: 8085
+  webrtc_bitrate: 500000
+
+satellites:
+  - id: plane-01-sat-01
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 0.0}
+  - id: plane-01-sat-02
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 72.0}
+  - id: plane-01-sat-03
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 144.0}
+  - id: plane-01-sat-04
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 216.0}
+  - id: plane-01-sat-05
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 288.0}
+
+  - id: plane-02-sat-01
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 45.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 18.0}
+  - id: plane-02-sat-02
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 45.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 90.0}
+  - id: plane-02-sat-03
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 45.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 162.0}
+  - id: plane-02-sat-04
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 45.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 234.0}
+  - id: plane-02-sat-05
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 45.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 306.0}
+
+  - id: plane-03-sat-01
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 90.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 36.0}
+  - id: plane-03-sat-02
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 90.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 108.0}
+  - id: plane-03-sat-03
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 90.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 180.0}
+  - id: plane-03-sat-04
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 90.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 252.0}
+  - id: plane-03-sat-05
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 90.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 324.0}
+
+  - id: plane-04-sat-01
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 135.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 54.0}
+  - id: plane-04-sat-02
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 135.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 126.0}
+  - id: plane-04-sat-03
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 135.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 198.0}
+  - id: plane-04-sat-04
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 135.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 270.0}
+  - id: plane-04-sat-05
+    orbit: {semi_major_axis_m: 6928137.0, eccentricity: 0.0005, inclination_deg: 53.0, raan_deg: 135.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 342.0}
