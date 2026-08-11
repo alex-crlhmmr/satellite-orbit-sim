@@ -79,3 +79,15 @@ jobs:
         with:
           name: swarm-atmosphere-comparison
           path: /tmp/swarm-atmospheres
+      - name: Frozen Sentinel atmosphere comparison
+        run: |
+          python validation/real_data/compare_atmospheres.py \
+            --data /tmp/sentinel1-pod \
+            --manifest validation/real_data/manifest.yaml \
+            --protocol validation/real_data/protocol.yaml \
+            --output /tmp/sentinel-atmospheres
+          python -c 'import json; d=json.load(open("/tmp/sentinel-atmospheres/comparison.json")); r={x["model"]:x for x in d["models"]}; assert r["nrlmsise00"]["passed"] and not r["exponential"]["passed"] and not r["harris_priester"]["passed"]; assert r["nrlmsise00"]["fitted_test_mean_rms_m"] == min(x["fitted_test_mean_rms_m"] for x in r.values())'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-atmosphere-comparison
+          path: /tmp/sentinel-atmospheres

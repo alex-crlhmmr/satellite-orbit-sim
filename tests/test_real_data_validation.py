@@ -104,3 +104,21 @@ def test_committed_swarm_atmosphere_comparison_prefers_nrlmsise00():
     assert set(rows) == {"exponential", "harris_priester", "nrlmsise00"}
     for metric in ("fitted_validation_mean_rms_m", "fitted_test_mean_rms_m"):
         assert rows["nrlmsise00"][metric] == min(row[metric] for row in rows.values())
+
+
+def test_committed_sentinel_comparison_preserves_mixed_result():
+    import json
+    path = ROOT / "validation/real_data/sentinel_atmosphere_comparison/comparison.json"
+    comparison = json.loads(path.read_text())
+    rows = {row["model"]: row for row in comparison["models"]}
+    assert rows["nrlmsise00"]["passed"] is True
+    assert rows["exponential"]["passed"] is False
+    assert rows["harris_priester"]["passed"] is False
+    assert rows["nrlmsise00"]["fitted_test_mean_rms_m"] == min(
+        row["fitted_test_mean_rms_m"] for row in rows.values()
+    )
+    # Avoid rewriting the evidence as a universal win: NRLMSISE-00 did not
+    # have the lowest absolute validation RMS on this mission.
+    assert rows["nrlmsise00"]["fitted_validation_mean_rms_m"] > min(
+        row["fitted_validation_mean_rms_m"] for row in rows.values()
+    )

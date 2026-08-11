@@ -70,3 +70,11 @@ effective ballistic parameter per atmosphere. It ranks predictive orbit
 residuals under that protocol; it does not independently identify true density.
 JB2008 and DTM2020 remain future adapters and must not be claimed until their
 implementations and required indices are versioned and validated.
+
+The committed comparisons intentionally retain a mixed cross-mission result.
+NRLMSISE-00 is decisively best on both frozen Swarm evaluation splits. For
+Sentinel-1A it is the only model to pass the existing acceptance gate and has
+the lowest untouched storm-test RMS, while the simpler controls have slightly
+lower absolute validation RMS. Therefore the evidence supports keeping
+NRLMSISE-00 as the default; it does not support claiming one universal winner
+for every altitude, regime, and scoring rule.
