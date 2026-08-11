@@ -22,6 +22,22 @@ def lvlh_body_to_eci(r_eci: np.ndarray, v_eci: np.ndarray) -> np.ndarray:
     return np.column_stack((x_body, y_body, z_body))
 
 
+def quaternion_body_to_eci(quaternion_xyzw) -> np.ndarray:
+    """Convert a normalized body-to-ECI quaternion [x,y,z,w] to a DCM."""
+    quaternion = np.asarray(quaternion_xyzw, dtype=np.float64)
+    if quaternion.shape != (4,) or not np.isfinite(quaternion).all():
+        raise ValueError("attitude quaternion must be a finite [x,y,z,w] vector")
+    norm = np.linalg.norm(quaternion)
+    if norm == 0:
+        raise ValueError("attitude quaternion must be nonzero")
+    x, y, z, w = quaternion / norm
+    return np.array([
+        [1 - 2*(y*y + z*z), 2*(x*y - z*w), 2*(x*z + y*w)],
+        [2*(x*y + z*w), 1 - 2*(x*x + z*z), 2*(y*z - x*w)],
+        [2*(x*z - y*w), 2*(y*z + x*w), 1 - 2*(x*x + y*y)],
+    ], dtype=np.float64)
+
+
 @dataclass(frozen=True)
 class BoxWingGeometry:
     """Convex box plus optional two-sided flat panels.
@@ -76,3 +92,13 @@ class BoxWingGeometry:
         body_to_eci = lvlh_body_to_eci(r_eci, v_eci)
         flow_body = body_to_eci.T @ relative_velocity_eci
         return self.projected_area(flow_body) / mass_kg
+
+    def area_mass_ratio(self, body_to_eci: np.ndarray,
+                        relative_velocity_eci: np.ndarray,
+                        mass_kg: float) -> float:
+        matrix = np.asarray(body_to_eci, dtype=np.float64)
+        if matrix.shape != (3, 3) or not np.allclose(matrix.T @ matrix, np.eye(3), atol=1e-10):
+            raise ValueError("body_to_eci must be an orthonormal 3x3 matrix")
+        if mass_kg <= 0:
+            raise ValueError("mass_kg must be positive")
+        return self.projected_area(matrix.T @ relative_velocity_eci) / mass_kg

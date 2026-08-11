@@ -192,12 +192,13 @@ class NRLMSISE2Atmosphere:
     name = "nrlmsise2"
 
     def __init__(self, f107: float = 150.0, f107a: float = 150.0,
-                 ap: float = 4.0) -> None:
+                 ap: float = 4.0, space_weather=None) -> None:
         from pymsis import calculate as _calc  # imported lazily
 
         self.f107 = float(f107)
         self.f107a = float(f107a)
         self.ap = float(ap)
+        self.space_weather = space_weather
         self._calc = _calc
 
         # Pre-allocate the small arrays pymsis expects.
@@ -220,7 +221,13 @@ class NRLMSISE2Atmosphere:
         lat_deg = math.degrees(lat_rad)
         lon_deg = math.degrees(math.atan2(y_e, x_e))
 
-        date = np.array([_jd_to_datetime_utc(jd)], dtype="datetime64[us]")
+        instant = _jd_to_datetime_utc(jd)
+        if self.space_weather is not None:
+            record = self.space_weather.at(instant)
+            self._f107_arr[0] = record.f107
+            self._f107a_arr[0] = record.f107a
+            self._ap_arr[0, :] = record.ap
+        date = np.array([instant], dtype="datetime64[us]")
         out = self._calc(
             date,
             np.array([lon_deg], dtype=np.float64),
@@ -314,10 +321,19 @@ def make_atmosphere(config: dict):
         result = USStd1976Atmosphere()
     elif model in ("nrlmsise2", "nrlmsise", "msis", "msis2"):
         try:
+            space_weather = None
+            if "space_weather_file" in config:
+                from .space_weather import SpaceWeatherSeries
+                space_weather = SpaceWeatherSeries.from_csv(
+                    config["space_weather_file"],
+                    max_age_days=config.get("space_weather_max_age_days", 1),
+                    expected_sha256=config.get("space_weather_sha256"),
+                )
             result = NRLMSISE2Atmosphere(
                 f107=config.get("f107", 150.0),
                 f107a=config.get("f107a", 150.0),
                 ap=config.get("ap", 4.0),
+                space_weather=space_weather,
             )
         except ImportError as exc:
             raise RuntimeError(

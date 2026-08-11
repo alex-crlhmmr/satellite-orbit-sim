@@ -35,7 +35,15 @@ regression tests. This profile is not a precision orbit-determination engine.
 It supports an optional box-wing projected-area model evaluated at each force
 call under an explicit +X along-track/+Z nadir LVLH attitude law. This removes
 the constant-area assumption for controlled simulations, but is not a
-substitute for mission attitude telemetry.
+substitute for mission attitude telemetry. A fixed body-to-ECI quaternion is
+also supported for controlled cases; time-tagged attitude telemetry is still
+an explicit next integration.
+
+The local MSIS adapter can use a checksum-locked daily CSV of F10.7, centered
+F10.7A, and Ap values. It rejects checksum mismatches and stale/missing dates.
+Fixed indices remain available for deterministic sensitivity scenarios. A
+specified Earth-fixed neutral-wind vector can be applied for force sensitivity
+testing, but it is not presented as a substitute for HWM or measured winds.
 
 ## Explicitly not yet claimed
 

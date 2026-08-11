@@ -43,7 +43,7 @@ from core.gravity import (
 )
 from core.srp import sun_position_eci
 from core.propagator import Propagator
-from core.aerodynamics import BoxWingGeometry, lvlh_body_to_eci
+from core.aerodynamics import BoxWingGeometry, lvlh_body_to_eci, quaternion_body_to_eci
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +113,10 @@ def test_lvlh_attitude_and_box_projected_area():
     })
     assert geometry.projected_area(np.array([1.0, 0.0, 0.0])) == 17.0
     assert geometry.projected_area(np.array([0.0, 1.0, 0.0])) == 8.0
+    identity = quaternion_body_to_eci([0.0, 0.0, 0.0, 2.0])
+    np.testing.assert_allclose(identity, np.eye(3))
+    with pytest.raises(ValueError, match="nonzero"):
+        quaternion_body_to_eci([0.0, 0.0, 0.0, 0.0])
 
 
 def test_geometry_changes_drag_with_attitude_relative_flow():
