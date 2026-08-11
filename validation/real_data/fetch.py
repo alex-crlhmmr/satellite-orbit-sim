@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 from pathlib import Path
+from urllib.parse import quote
 from urllib.request import urlopen
 
 import yaml
@@ -30,7 +31,12 @@ def main() -> None:
     for entry in manifest["files"]:
         target = args.destination / entry["filename"]
         if not target.exists() or sha256(target) != entry["sha256"]:
-            url = manifest["dataset"]["base_url"] + entry["filename"]
+            dataset = manifest["dataset"]
+            if "download_url_template" in dataset:
+                remote_path = dataset["remote_path"] + entry["filename"]
+                url = dataset["download_url_template"].format(path=quote(remote_path, safe=""))
+            else:
+                url = dataset["base_url"] + entry["filename"]
             temporary = target.with_suffix(target.suffix + ".part")
             with urlopen(url) as response, temporary.open("wb") as output:
                 while chunk := response.read(1024 * 1024):
@@ -44,4 +50,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

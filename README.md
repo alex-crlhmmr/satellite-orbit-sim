@@ -8,7 +8,7 @@ inventory and remaining limitations.
 
 Independent Orekit cross-validation, reproducible scenarios, and the latest
 error report are under [`validation/`](validation/README.md).
-The evidence-gated benchmark against real Sentinel-1A precise orbits is under
+Evidence-gated benchmarks against real Sentinel-1A and Swarm-A precise orbits are under
 [`validation/real_data/`](validation/real_data/README.md).
 
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue)

@@ -24,6 +24,7 @@ jobs:
           path: |
             /tmp/orbit-validation-tools
             /tmp/sentinel1-pod
+            /tmp/swarm-pod
           key: orbit-validation-v1-${{ runner.os }}-${{ runner.arch }}
       - run: python -m pip install -r requirements-dev.txt
       - run: validation/bootstrap.sh /tmp/orbit-validation-tools
@@ -52,3 +53,17 @@ jobs:
         with:
           name: real-data-validation-report
           path: /tmp/real-data-validation
+      - name: Real Swarm-A evidence gate
+        run: |
+          python validation/real_data/fetch.py /tmp/swarm-pod \
+            --manifest validation/real_data/swarm_manifest.yaml
+          python validation/real_data/benchmark.py \
+            --data /tmp/swarm-pod \
+            --manifest validation/real_data/swarm_manifest.yaml \
+            --protocol validation/real_data/swarm_protocol.yaml \
+            --output /tmp/swarm-validation
+          python -c 'import json; assert json.load(open("/tmp/swarm-validation/results.json"))["passed"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: swarm-validation-report
+          path: /tmp/swarm-validation
