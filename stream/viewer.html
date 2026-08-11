@@ -168,7 +168,10 @@
       }
     }, 2000);
     const mediaWatchdog = setInterval(() => {
-      if (!receivedWebRTC || performance.now() - lastVideoFrameAt < 3000) return;
+      // WebRTC's jitter buffer can recover short Wi-Fi outages. Rebuilding the
+      // encoder too early makes those outages visibly worse and can exhaust
+      // the peer limit while the previous ICE session is closing.
+      if (!receivedWebRTC || performance.now() - lastVideoFrameAt < 12000) return;
       conn.textContent = "video: recovering…";
       conn.classList.add("off");
       receivedWebRTC = false;
