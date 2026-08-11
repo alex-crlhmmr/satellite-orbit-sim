@@ -6,6 +6,9 @@ The default configuration uses the validated research dynamics profile; see
 [the dynamics verification status](docs/dynamics_status.md) for its model
 inventory and remaining limitations.
 
+Independent Orekit cross-validation, reproducible scenarios, and the latest
+error report are under [`validation/`](validation/README.md).
+
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
 ![PyTorch](https://img.shields.io/badge/pytorch-2.0%2B-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)

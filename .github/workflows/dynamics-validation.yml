@@ -1,0 +1,42 @@
+name: Dynamics validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "core/**"
+      - "validation/**"
+      - "requirements*.txt"
+      - ".github/workflows/dynamics-validation.yml"
+
+jobs:
+  orekit-cross-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/orbit-validation-tools
+          key: orbit-validation-v1-${{ runner.os }}-${{ runner.arch }}
+      - run: python -m pip install -r requirements-dev.txt
+      - run: validation/bootstrap.sh /tmp/orbit-validation-tools
+      - run: python -m pytest -q
+      - name: Orekit/Brahe quick matrix
+        run: |
+          python validation/run.py --quick \
+            --java /tmp/orbit-validation-tools/jdk-21.0.12+8/bin/java \
+            --orekit-jar validation/orekit/target/orekit-reference-1.0.0.jar \
+            --orekit-data /tmp/orbit-validation-tools/orekit-data-baf158744d38ec76cf94e2d396280d545b9f0ba2 \
+            --gravity-file /tmp/orbit-validation-tools/EGM2008.gfc \
+            --output /tmp/quick-validation
+          python -c 'import json; assert json.load(open("/tmp/quick-validation/results.json"))["passed"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quick-validation-report
+          path: /tmp/quick-validation
+

@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560">
+<rect width="100%" height="100%" fill="white"/>
+<text x="500" y="25" text-anchor="middle" font-family="sans-serif" font-size="18">Orekit–Brahe maximum position disagreement</text>
+<line x1="90" y1="460.0" x2="970" y2="460.0" stroke="#ddd"/>
+<text x="82" y="464.0" text-anchor="end" font-family="sans-serif" font-size="12">1e-7 m</text>
+<line x1="90" y1="413.9" x2="970" y2="413.9" stroke="#ddd"/>
+<text x="82" y="417.9" text-anchor="end" font-family="sans-serif" font-size="12">1e-6 m</text>
+<line x1="90" y1="367.8" x2="970" y2="367.8" stroke="#ddd"/>
+<text x="82" y="371.8" text-anchor="end" font-family="sans-serif" font-size="12">1e-5 m</text>
+<line x1="90" y1="321.7" x2="970" y2="321.7" stroke="#ddd"/>
+<text x="82" y="325.7" text-anchor="end" font-family="sans-serif" font-size="12">1e-4 m</text>
+<line x1="90" y1="275.6" x2="970" y2="275.6" stroke="#ddd"/>
+<text x="82" y="279.6" text-anchor="end" font-family="sans-serif" font-size="12">1e-3 m</text>
+<line x1="90" y1="229.4" x2="970" y2="229.4" stroke="#ddd"/>
+<text x="82" y="233.4" text-anchor="end" font-family="sans-serif" font-size="12">1e-2 m</text>
+<line x1="90" y1="183.3" x2="970" y2="183.3" stroke="#ddd"/>
+<text x="82" y="187.3" text-anchor="end" font-family="sans-serif" font-size="12">1e-1 m</text>
+<line x1="90" y1="137.2" x2="970" y2="137.2" stroke="#ddd"/>
+<text x="82" y="141.2" text-anchor="end" font-family="sans-serif" font-size="12">1e0 m</text>
+<line x1="90" y1="91.1" x2="970" y2="91.1" stroke="#ddd"/>
+<text x="82" y="95.1" text-anchor="end" font-family="sans-serif" font-size="12">1e1 m</text>
+<line x1="90" y1="45.0" x2="970" y2="45.0" stroke="#ddd"/>
+<text x="82" y="49.0" text-anchor="end" font-family="sans-serif" font-size="12">1e2 m</text>
+<line x1="90" y1="137.2" x2="970" y2="137.2" stroke="#c33" stroke-dasharray="6 4"/>
+<circle cx="95.9" cy="270.2" r="4" fill="#2878b5"/>
+<circle cx="107.6" cy="233.2" r="4" fill="#2878b5"/>
+<text x="107.6" y="480" transform="rotate(35 107.6 480)" font-family="sans-serif" font-size="10">iss like leo</text>
+<circle cx="119.3" cy="202.5" r="4" fill="#2878b5"/>
+<circle cx="131.1" cy="264.2" r="4" fill="#e07a1f"/>
+<circle cx="142.8" cy="208.1" r="4" fill="#e07a1f"/>
+<text x="142.8" y="480" transform="rotate(35 142.8 480)" font-family="sans-serif" font-size="10">iss like leo</text>
+<circle cx="154.5" cy="169.6" r="4" fill="#e07a1f"/>
+<circle cx="166.3" cy="268.2" r="4" fill="#3a9d5d"/>
+<circle cx="178.0" cy="242.8" r="4" fill="#3a9d5d"/>
+<text x="178.0" y="480" transform="rotate(35 178.0 480)" font-family="sans-serif" font-size="10">iss like leo</text>
+<circle cx="189.7" cy="230.5" r="4" fill="#3a9d5d"/>
+<circle cx="201.5" cy="217.3" r="4" fill="#7b9f35"/>
+<circle cx="213.2" cy="197.1" r="4" fill="#7b9f35"/>
+<text x="213.2" y="480" transform="rotate(35 213.2 480)" font-family="sans-serif" font-size="10">iss like leo</text>
+<circle cx="224.9" cy="176.7" r="4" fill="#7b9f35"/>
+<circle cx="236.7" cy="192.8" r="4" fill="#8a55aa"/>
+<circle cx="248.4" cy="143.3" r="4" fill="#8a55aa"/>
+<text x="248.4" y="480" transform="rotate(35 248.4 480)" font-family="sans-serif" font-size="10">iss like leo</text>
+<circle cx="260.1" cy="102.7" r="4" fill="#8a55aa"/>
+<circle cx="271.9" cy="279.0" r="4" fill="#2878b5"/>
+<circle cx="283.6" cy="254.5" r="4" fill="#2878b5"/>
+<text x="283.6" y="480" transform="rotate(35 283.6 480)" font-family="sans-serif" font-size="10">sun synchronous leo</text>
+<circle cx="295.3" cy="225.5" r="4" fill="#2878b5"/>
+<circle cx="307.1" cy="287.7" r="4" fill="#e07a1f"/>
+<circle cx="318.8" cy="252.4" r="4" fill="#e07a1f"/>
+<text x="318.8" y="480" transform="rotate(35 318.8 480)" font-family="sans-serif" font-size="10">sun synchronous leo</text>
+<circle cx="330.5" cy="233.4" r="4" fill="#e07a1f"/>
+<circle cx="342.3" cy="248.7" r="4" fill="#3a9d5d"/>
+<circle cx="354.0" cy="216.2" r="4" fill="#3a9d5d"/>
+<text x="354.0" y="480" transform="rotate(35 354.0 480)" font-family="sans-serif" font-size="10">sun synchronous leo</text>
+<circle cx="365.7" cy="192.7" r="4" fill="#3a9d5d"/>
+<circle cx="377.5" cy="207.0" r="4" fill="#7b9f35"/>
+<circle cx="389.2" cy="185.3" r="4" fill="#7b9f35"/>
+<text x="389.2" y="480" transform="rotate(35 389.2 480)" font-family="sans-serif" font-size="10">sun synchronous leo</text>
+<circle cx="400.9" cy="167.5" r="4" fill="#7b9f35"/>
+<circle cx="412.7" cy="171.3" r="4" fill="#8a55aa"/>
+<circle cx="424.4" cy="127.5" r="4" fill="#8a55aa"/>
+<text x="424.4" y="480" transform="rotate(35 424.4 480)" font-family="sans-serif" font-size="10">sun synchronous leo</text>
+<circle cx="436.1" cy="94.7" r="4" fill="#8a55aa"/>
+<circle cx="447.9" cy="264.6" r="4" fill="#2878b5"/>
+<circle cx="459.6" cy="228.9" r="4" fill="#2878b5"/>
+<text x="459.6" y="480" transform="rotate(35 459.6 480)" font-family="sans-serif" font-size="10">eccentric leo</text>
+<circle cx="471.3" cy="207.6" r="4" fill="#2878b5"/>
+<circle cx="483.1" cy="244.4" r="4" fill="#e07a1f"/>
+<circle cx="494.8" cy="222.5" r="4" fill="#e07a1f"/>
+<text x="494.8" y="480" transform="rotate(35 494.8 480)" font-family="sans-serif" font-size="10">eccentric leo</text>
+<circle cx="506.5" cy="211.7" r="4" fill="#e07a1f"/>
+<circle cx="518.3" cy="266.9" r="4" fill="#3a9d5d"/>
+<circle cx="530.0" cy="239.0" r="4" fill="#3a9d5d"/>
+<text x="530.0" y="480" transform="rotate(35 530.0 480)" font-family="sans-serif" font-size="10">eccentric leo</text>
+<circle cx="541.7" cy="212.5" r="4" fill="#3a9d5d"/>
+<circle cx="553.5" cy="212.3" r="4" fill="#7b9f35"/>
+<circle cx="565.2" cy="188.2" r="4" fill="#7b9f35"/>
+<text x="565.2" y="480" transform="rotate(35 565.2 480)" font-family="sans-serif" font-size="10">eccentric leo</text>
+<circle cx="576.9" cy="171.7" r="4" fill="#7b9f35"/>
+<circle cx="588.7" cy="165.4" r="4" fill="#8a55aa"/>
+<circle cx="600.4" cy="113.8" r="4" fill="#8a55aa"/>
+<text x="600.4" y="480" transform="rotate(35 600.4 480)" font-family="sans-serif" font-size="10">eccentric leo</text>
+<circle cx="612.1" cy="73.8" r="4" fill="#8a55aa"/>
+<circle cx="623.9" cy="429.5" r="4" fill="#2878b5"/>
+<circle cx="635.6" cy="413.3" r="4" fill="#2878b5"/>
+<text x="635.6" y="480" transform="rotate(35 635.6 480)" font-family="sans-serif" font-size="10">gps like meo</text>
+<circle cx="647.3" cy="381.3" r="4" fill="#2878b5"/>
+<circle cx="659.1" cy="343.8" r="4" fill="#e07a1f"/>
+<circle cx="670.8" cy="313.6" r="4" fill="#e07a1f"/>
+<text x="670.8" y="480" transform="rotate(35 670.8 480)" font-family="sans-serif" font-size="10">gps like meo</text>
+<circle cx="682.5" cy="290.5" r="4" fill="#e07a1f"/>
+<circle cx="694.3" cy="358.2" r="4" fill="#3a9d5d"/>
+<circle cx="706.0" cy="331.8" r="4" fill="#3a9d5d"/>
+<text x="706.0" y="480" transform="rotate(35 706.0 480)" font-family="sans-serif" font-size="10">gps like meo</text>
+<circle cx="717.7" cy="310.9" r="4" fill="#3a9d5d"/>
+<circle cx="729.5" cy="160.7" r="4" fill="#7b9f35"/>
+<circle cx="741.2" cy="138.7" r="4" fill="#7b9f35"/>
+<text x="741.2" y="480" transform="rotate(35 741.2 480)" font-family="sans-serif" font-size="10">gps like meo</text>
+<circle cx="752.9" cy="121.6" r="4" fill="#7b9f35"/>
+<circle cx="764.7" cy="160.7" r="4" fill="#8a55aa"/>
+<circle cx="776.4" cy="138.7" r="4" fill="#8a55aa"/>
+<text x="776.4" y="480" transform="rotate(35 776.4 480)" font-family="sans-serif" font-size="10">gps like meo</text>
+<circle cx="788.1" cy="121.6" r="4" fill="#8a55aa"/>
+<circle cx="799.9" cy="388.2" r="4" fill="#2878b5"/>
+<circle cx="811.6" cy="355.3" r="4" fill="#2878b5"/>
+<text x="811.6" y="480" transform="rotate(35 811.6 480)" font-family="sans-serif" font-size="10">near geostationary</text>
+<circle cx="823.3" cy="324.9" r="4" fill="#2878b5"/>
+<circle cx="835.1" cy="368.2" r="4" fill="#e07a1f"/>
+<circle cx="846.8" cy="337.8" r="4" fill="#e07a1f"/>
+<text x="846.8" y="480" transform="rotate(35 846.8 480)" font-family="sans-serif" font-size="10">near geostationary</text>
+<circle cx="858.5" cy="333.4" r="4" fill="#e07a1f"/>
+<circle cx="870.3" cy="332.0" r="4" fill="#3a9d5d"/>
+<circle cx="882.0" cy="319.4" r="4" fill="#3a9d5d"/>
+<text x="882.0" y="480" transform="rotate(35 882.0 480)" font-family="sans-serif" font-size="10">near geostationary</text>
+<circle cx="893.7" cy="305.7" r="4" fill="#3a9d5d"/>
+<circle cx="905.5" cy="147.6" r="4" fill="#7b9f35"/>
+<circle cx="917.2" cy="125.7" r="4" fill="#7b9f35"/>
+<text x="917.2" y="480" transform="rotate(35 917.2 480)" font-family="sans-serif" font-size="10">near geostationary</text>
+<circle cx="928.9" cy="108.8" r="4" fill="#7b9f35"/>
+<circle cx="940.7" cy="148.0" r="4" fill="#8a55aa"/>
+<circle cx="952.4" cy="126.0" r="4" fill="#8a55aa"/>
+<text x="952.4" y="480" transform="rotate(35 952.4 480)" font-family="sans-serif" font-size="10">near geostationary</text>
+<circle cx="964.1" cy="109.0" r="4" fill="#8a55aa"/>
+<text x="90" y="540" font-family="sans-serif" font-size="12" fill="#2878b5">● two-body</text>
+<text x="200" y="540" font-family="sans-serif" font-size="12" fill="#e07a1f">● 20x20 gravity</text>
+<text x="340" y="540" font-family="sans-serif" font-size="12" fill="#3a9d5d">● Sun/Moon</text>
+<text x="450" y="540" font-family="sans-serif" font-size="12" fill="#7b9f35">● SRP sunlight</text>
+<text x="580" y="540" font-family="sans-serif" font-size="12" fill="#8a55aa">● SRP eclipse</text>
+</svg>
