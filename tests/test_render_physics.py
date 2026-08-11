@@ -5,10 +5,12 @@ from pathlib import Path
 
 import brahe as bh
 import numpy as np
+import pytest
 
 from core.constants import R_EARTH, R_EARTH_POLAR
 from render.earth import Earth
 from render.ephemeris import scene_ephemeris
+from render.renderer import Renderer
 
 ASSET_HASHES = {
     "earth_day.jpg": "a9f0088972dee0254610af851c4d6838ca3f2cf79176987e0a5713e2c15ec042",
@@ -86,3 +88,31 @@ def test_documented_visual_assets_are_immutable():
     assets = Path(__file__).parents[1] / "assets"
     for name, expected in ASSET_HASHES.items():
         assert hashlib.sha256((assets / name).read_bytes()).hexdigest() == expected
+
+
+def test_renderer_rejects_unknown_constellation_target():
+    renderer = Renderer.__new__(Renderer)
+    with pytest.raises(ValueError, match="target_index"):
+        renderer.render_frame(
+            np.zeros((2, 3)), np.ones(3), np.eye(3), target_index=2
+        )
+
+
+def test_renderer_draws_each_constellation_trail(monkeypatch):
+    renderer = Renderer.__new__(Renderer)
+    trails_drawn = []
+    satellites_drawn = []
+    monkeypatch.setattr(renderer, "_draw_earth", lambda *args: None)
+    monkeypatch.setattr(
+        renderer, "_draw_trail", lambda trail, vp: trails_drawn.append(trail)
+    )
+    monkeypatch.setattr(
+        renderer, "_draw_satellite", lambda pos, vp: satellites_drawn.append(pos)
+    )
+    trails = [np.zeros((2, 3)), np.ones((2, 3))]
+    satellites = np.zeros((2, 3))
+    renderer._render_scene(
+        satellites, np.ones(3), np.eye(3), trails, np.eye(4)
+    )
+    assert len(trails_drawn) == 2
+    assert len(satellites_drawn) == 2

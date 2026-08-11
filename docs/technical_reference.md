@@ -124,6 +124,21 @@ satellite-orbit-sim --backend legacy
 satellite-orbit-sim --config config/legacy.yaml
 ```
 
+## Constellations
+
+An optional `satellites` list describes independently propagated spacecraft.
+Each entry inherits the top-level `orbit` and `satellite` values and may
+override either mapping. Every member owns an independent Cartesian state,
+propagator, covariance and render trail. Mutual gravity, inter-satellite links,
+collision response and formation-control logic are not implicitly modeled.
+
+The renderer draws every member while `render.camera_target` selects the one
+used by tracking and onboard cameras. Telemetry schema version 2 includes each
+member and its `active` status under `satellites`; the target member remains at
+the top level for compatibility. High-fidelity members currently advance
+sequentially, so propagation cost is approximately linear in constellation
+size.
+
 ## Rendering and cameras
 
 The renderer uses moderngl with an EGL standalone context and an off-screen RGB

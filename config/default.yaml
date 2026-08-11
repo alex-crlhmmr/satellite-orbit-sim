@@ -96,6 +96,7 @@ render:
   # Static NASA composites; see assets/README.md for provenance and time limits.
   # No terrain displacement, live weather, clouds, or synthetic stars are shown.
   camera_mode: tracking           # 'tracking' (follows sat) or 'fixed' (inertial overview)
+  camera_target: null             # id followed by cameras; null selects first satellite
 
 # Streaming settings
 stream:

@@ -121,13 +121,18 @@ class Renderer:
         """Draw the full scene (Earth + trail + satellites) with a given VP matrix."""
         self._draw_earth(earth_rotation, sun_dir, vp)
         if show_orbit and trail_positions is not None:
-            self._draw_trail(trail_positions, vp)
+            trails = (trail_positions if isinstance(trail_positions, (list, tuple))
+                      else [trail_positions])
+            for trail in trails:
+                if trail is not None:
+                    self._draw_trail(trail, vp)
         if show_orbit:
             for pos in sat_positions:
                 self._draw_satellite(pos, vp)
 
     def render_frame(self, sat_positions, sun_pos, earth_rotation,
-                     trail_positions=None, sat_velocity=None) -> np.ndarray:
+                     trail_positions=None, sat_velocity=None,
+                     target_index: int = 0) -> np.ndarray:
         """Render a complete frame and return the pixel data.
 
         Args:
@@ -142,6 +147,9 @@ class Renderer:
             RGB uint8 numpy array of shape ``(height, width, 3)``.
         """
         sat_positions = np.atleast_2d(np.asarray(sat_positions, dtype=np.float64))
+        if not 0 <= target_index < len(sat_positions):
+            raise ValueError("target_index is outside sat_positions")
+        target = sat_positions[target_index]
 
         # Normalised sun direction
         sun_pos = np.asarray(sun_pos, dtype=np.float64)
@@ -163,9 +171,9 @@ class Renderer:
             # --- Left half ---
             self.ctx.viewport = (0, 0, half_w, self.height)
             if mode == 'split':
-                self.camera.track_satellite(sat_positions[0])
+                self.camera.track_satellite(target)
             else:  # onboard
-                self.camera.onboard_nadir(sat_positions[0])
+                self.camera.onboard_nadir(target)
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
             self._render_scene(
@@ -176,9 +184,9 @@ class Renderer:
             # --- Right half ---
             self.ctx.viewport = (half_w, 0, self.width - half_w, self.height)
             if mode == 'split':
-                self.camera.fixed_inertial(sat_positions[0])
+                self.camera.fixed_inertial(target)
             else:  # onboard
-                self.camera.onboard_horizon(sat_positions[0], sat_velocity)
+                self.camera.onboard_horizon(target, sat_velocity)
             self.camera._dirty_proj = True
             vp = self.camera.vp_matrix()
             self._render_scene(
@@ -196,15 +204,15 @@ class Renderer:
             self.ctx.clear(0.0, 0.0, 0.02, 1.0)
 
             if mode == 'fixed':
-                self.camera.fixed_inertial(sat_positions[0])
+                self.camera.fixed_inertial(target)
             elif mode == 'ground_track':
-                self.camera.ground_track(sat_positions[0])
+                self.camera.ground_track(target)
             elif mode == 'nadir':
-                self.camera.onboard_nadir(sat_positions[0])
+                self.camera.onboard_nadir(target)
             elif mode == 'horizon':
-                self.camera.onboard_horizon(sat_positions[0], sat_velocity)
+                self.camera.onboard_horizon(target, sat_velocity)
             else:
-                self.camera.track_satellite(sat_positions[0])
+                self.camera.track_satellite(target)
             vp = self.camera.vp_matrix()
             self._render_scene(
                 sat_positions, sun_dir, earth_rotation, trail_positions, vp
