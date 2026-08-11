@@ -68,6 +68,16 @@
   const mjpeg = document.getElementById("mjpeg");
   let videoRetry = null;
   let receivedWebRTC = false;
+  let activePC = null;
+  let reconnectTimer = null;
+
+  function scheduleWebRTCReconnect() {
+    if (reconnectTimer !== null) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connectWebRTC().catch(connectMJPEG);
+    }, 500);
+  }
 
   function connectMJPEG() {
     if (receivedWebRTC) return;
@@ -84,9 +94,12 @@
   };
 
   async function connectWebRTC() {
+    if (activePC) activePC.close();
     const signalPort = Number(location.port || 80) + 1;
     const ws = new WebSocket(`ws://${location.hostname}:${signalPort}`);
     const pc = new RTCPeerConnection({iceServers: []});
+    activePC = pc;
+    let lastVideoFrameAt = performance.now();
     const pendingIce = [];
     pc.addTransceiver("video", {direction: "recvonly"});
     const fallbackTimer = setTimeout(connectMJPEG, 20000);
@@ -99,11 +112,14 @@
       conn.classList.remove("off");
       video.play().catch(() => {});
       if (video.requestVideoFrameCallback) {
-        video.requestVideoFrameCallback(() => {
+        const frameArrived = () => {
+          lastVideoFrameAt = performance.now();
           receivedWebRTC = true;
           clearTimeout(fallbackTimer);
           conn.textContent = "video: H.264 WebRTC";
-        });
+          video.requestVideoFrameCallback(frameArrived);
+        };
+        video.requestVideoFrameCallback(frameArrived);
       } else {
         video.onplaying = () => {
           receivedWebRTC = true;
@@ -132,6 +148,39 @@
       await pc.setLocalDescription(offer);
       ws.send(JSON.stringify({type: "offer", sdp: offer.sdp}));
     };
+    const statsTimer = setInterval(async () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      const report = await pc.getStats();
+      for (const stat of report.values()) {
+        if (stat.type !== "inbound-rtp" || stat.kind !== "video") continue;
+        ws.send(JSON.stringify({type: "client-stats", stats: {
+          packetsReceived: stat.packetsReceived,
+          packetsLost: stat.packetsLost,
+          framesDecoded: stat.framesDecoded,
+          framesDropped: stat.framesDropped,
+          framesPerSecond: stat.framesPerSecond,
+          freezeCount: stat.freezeCount,
+          totalFreezesDuration: stat.totalFreezesDuration,
+          jitter: stat.jitter,
+          jitterBufferDelay: stat.jitterBufferDelay,
+          jitterBufferEmittedCount: stat.jitterBufferEmittedCount
+        }}));
+      }
+    }, 2000);
+    const mediaWatchdog = setInterval(() => {
+      if (!receivedWebRTC || performance.now() - lastVideoFrameAt < 3000) return;
+      conn.textContent = "video: recovering…";
+      conn.classList.add("off");
+      receivedWebRTC = false;
+      ws.close();
+      pc.close();
+    }, 1000);
+    ws.addEventListener("close", () => {
+      clearInterval(statsTimer);
+      clearInterval(mediaWatchdog);
+      if (activePC === pc) activePC = null;
+      scheduleWebRTCReconnect();
+    });
     ws.onerror = () => {
       clearTimeout(fallbackTimer);
       connectMJPEG();
@@ -139,7 +188,7 @@
     pc.onconnectionstatechange = () => {
       if (["failed", "closed"].includes(pc.connectionState)) {
         clearTimeout(fallbackTimer);
-        connectMJPEG();
+        ws.close();
       }
     };
   }

@@ -64,7 +64,8 @@ async def probe(uri: str, frame_count: int) -> None:
                         await peer.addIceCandidate(candidate)
 
         signalling_task = asyncio.create_task(signalling())
-        await asyncio.wait_for(complete.wait(), timeout=20)
+        timeout = max(20.0, frame_count / 20.0 + 15.0)
+        await asyncio.wait_for(complete.wait(), timeout=timeout)
         signalling_task.cancel()
 
     await peer.close()
@@ -74,6 +75,10 @@ async def probe(uri: str, frame_count: int) -> None:
         "mean_fps": 1.0 / statistics.mean(intervals),
         "p95_interval_ms": statistics.quantiles(intervals, n=20)[18] * 1000,
         "max_interval_ms": max(intervals) * 1000,
+        "intervals_over_100ms": sum(value > 0.1 for value in intervals),
+        "intervals_over_500ms": sum(value > 0.5 for value in intervals),
+        "intervals_over_1s": sum(value > 1.0 for value in intervals),
+        "intervals_over_2s": sum(value > 2.0 for value in intervals),
     }, indent=2))
 
 

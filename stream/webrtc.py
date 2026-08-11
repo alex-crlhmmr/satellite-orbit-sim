@@ -182,6 +182,8 @@ class WebRTCServer:
                         "add-ice-candidate", int(message["sdpMLineIndex"]),
                         message["candidate"],
                     )
+                elif message.get("type") == "client-stats":
+                    logger.info("WebRTC browser stats: %s", message.get("stats", {}))
         finally:
             self._peer_by_id.pop(peer_id, None)
             self._close_peer(peer)

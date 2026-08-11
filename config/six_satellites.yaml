@@ -18,7 +18,8 @@ stream:
   jpeg_quality: 75
   webrtc_enabled: true
   webrtc_port: 8085
-  webrtc_bitrate: 4000000
+  # Conservative CBR for congested 2.4 GHz Wi-Fi; H.264 remains 1280x720.
+  webrtc_bitrate: 1800000
 
 satellites:
   - id: equatorial-a
