@@ -21,7 +21,9 @@ jobs:
           cache: pip
       - uses: actions/cache@v4
         with:
-          path: /tmp/orbit-validation-tools
+          path: |
+            /tmp/orbit-validation-tools
+            /tmp/sentinel1-pod
           key: orbit-validation-v1-${{ runner.os }}-${{ runner.arch }}
       - run: python -m pip install -r requirements-dev.txt
       - run: validation/bootstrap.sh /tmp/orbit-validation-tools
@@ -39,4 +41,14 @@ jobs:
         with:
           name: quick-validation-report
           path: /tmp/quick-validation
-
+      - name: Real Sentinel-1A evidence gate
+        run: |
+          python validation/real_data/fetch.py /tmp/sentinel1-pod
+          python validation/real_data/benchmark.py \
+            --data /tmp/sentinel1-pod \
+            --output /tmp/real-data-validation
+          python -c 'import json; assert json.load(open("/tmp/real-data-validation/results.json"))["passed"]'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: real-data-validation-report
+          path: /tmp/real-data-validation

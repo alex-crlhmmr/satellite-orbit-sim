@@ -12,6 +12,8 @@ from __future__ import annotations
 import numpy as np
 import torch
 
+from .uncertainty import white_acceleration_process_noise
+
 
 class HighFidelityPropagator:
     """Torch-compatible adapter around ``brahe.NumericalOrbitPropagator``."""
@@ -50,6 +52,10 @@ class HighFidelityPropagator:
             config.get("initial_covariance", np.eye(6)), dtype=np.float64
         )
         self.last_covariance = self.initial_covariance.copy()
+        self.process_noise_acceleration_psd_rtn = np.asarray(
+            config.get("process_noise_acceleration_psd_rtn", [0.0, 0.0, 0.0]),
+            dtype=np.float64,
+        )
         self._thrust_np = None
 
         if not HighFidelityPropagator._data_initialized:
@@ -139,9 +145,12 @@ class HighFidelityPropagator:
         prop.propagate_to(final_epoch)
         out = np.asarray(prop.current_state(), dtype=np.float64)
         self.last_covariance = np.asarray(prop.covariance(final_epoch), dtype=np.float64)
+        self.last_covariance += white_acceleration_process_noise(
+            out, float(duration), self.process_noise_acceleration_psd_rtn
+        )
+        self.last_covariance = 0.5 * (self.last_covariance + self.last_covariance.T)
         final = torch.from_numpy(out).to(device=state.device, dtype=self.dtype)
         return final, [state.detach().clone(), final.detach().clone()]
 
     def step(self, t: float, state: torch.Tensor) -> torch.Tensor:
         return self.propagate(state, self.dt, t0=t)[0]
-

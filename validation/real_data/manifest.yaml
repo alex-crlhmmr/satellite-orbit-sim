@@ -1,0 +1,70 @@
+dataset:
+  name: Sentinel-1 Precise Orbit Determination Products
+  provider: Alaska Satellite Facility mirror of Copernicus POD Service
+  base_url: https://s1-orbits.s3.us-west-2.amazonaws.com/AUX_POEORB/
+  frame: ITRF/Earth-fixed
+  time_system: UTC
+  sampling_s: 10
+  stated_accuracy: 5 cm 3D RMS requirement; typically below 1 cm
+  citation_url: https://registry.opendata.aws/s1-orbits/
+
+# Splits are chronological and immutable. May 10-11 (Gannon storm) are
+# validation data because their results were observed during estimator design.
+# The later October 10-12 storm was selected and frozen before its first run.
+files:
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240422T070751_V20240401T225942_20240403T005942.EOF
+    sha256: 4319e26cda8446dc6fdb098310520bdfbd12fcdc7f29b8c4f2d7d6981d4abf9c
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240423T070803_V20240402T225942_20240404T005942.EOF
+    sha256: 65978e314ebd24329077e5f03cf61f7b9be92048f552930097b4fa0fd4c620df
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240424T070753_V20240403T225942_20240405T005942.EOF
+    sha256: a25f2ea53a05938481ddeda24291732ab46d51ceab5bfef65f0edf82ffe49380
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240425T070756_V20240404T225942_20240406T005942.EOF
+    sha256: cb63134bedabf428c10628ad7004f842d8d28cc4f55522057705a222cadc7956
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240426T070800_V20240405T225942_20240407T005942.EOF
+    sha256: 765f1a299ca57597c5691a2bc06543347a23a473424ae47be069e8a53585946a
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240427T070747_V20240406T225942_20240408T005942.EOF
+    sha256: ff616710dfb5046bb6247d340c43f9513737d0c9091b6b2651941473c0660e1c
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240428T070804_V20240407T225942_20240409T005942.EOF
+    sha256: 3b5b7a8fc83f4d6ce9669e2c906151ff6ea05feee1a74e7f6ffa60bd398eefbe
+  - split: train
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240429T070916_V20240408T225942_20240410T005942.EOF
+    sha256: 4c7fa37d2cf5aa083e1361f448cb1e4942b12771c22b6b8327e8fc5392ee44b3
+  - split: validation
+    regime: quiet
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240506T070810_V20240415T225942_20240417T005942.EOF
+    sha256: d2b696b37716e290c3a6db84b5743e622417788f8ed7b4d553b402df3d69ef89
+  - split: validation
+    regime: storm
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240530T070820_V20240509T225942_20240511T005942.EOF
+    sha256: 808e8efdf845440ee5a91d216f42ca5e770803d50b0fafcf17d9bacfbb61403b
+  - split: validation
+    regime: storm
+    filename: S1A_OPER_AUX_POEORB_OPOD_20240531T070832_V20240510T225942_20240512T005942.EOF
+    sha256: b687a5dd534425723864a87ccbac0a1282f5c7c8ff47dd6af692b5d779e63caa
+  - split: test
+    regime: storm
+    filename: S1A_OPER_AUX_POEORB_OPOD_20241030T070550_V20241009T225942_20241011T005942.EOF
+    sha256: d721a5637e0579ed804c9e8987a73da747242014aa7f13089dc83562c508dbf3
+  - split: test
+    regime: storm
+    filename: S1A_OPER_AUX_POEORB_OPOD_20241031T070644_V20241010T225942_20241012T005942.EOF
+    sha256: 0c5dee7a64ec92801dfa3e44d1b759b77d9677b706737c7cfa50980803afaf90
+  - split: test
+    regime: storm
+    filename: S1A_OPER_AUX_POEORB_OPOD_20241101T070639_V20241011T225942_20241013T005942.EOF
+    sha256: 4cdcc8af6acf668dac56a4ea62cfd6cf0f2b060bab6637dcfcdeba53ac024196
