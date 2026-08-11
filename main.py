@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import time
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -74,6 +75,62 @@ def build_initial_state(config: dict) -> torch.Tensor:
 
     r, v = keplerian_to_cartesian(a, e, i, raan, argp, nu)
     return torch.cat([r, v])
+
+
+@dataclass
+class SpacecraftRuntime:
+    """Independent state owned by one spacecraft in a simulation run."""
+
+    identifier: str
+    state: torch.Tensor
+    propagator: object
+    trail: deque
+    active: bool = True
+
+
+def spacecraft_configs(config: dict) -> list[dict]:
+    """Expand legacy single-spacecraft or constellation configuration.
+
+    Each item in ``satellites`` may override ``orbit`` and ``satellite``.
+    Propagator/environment settings remain shared, while each spacecraft gets
+    its own propagator instance (and therefore independent covariance state).
+    """
+    entries = config.get("satellites")
+    if entries is None:
+        return [{**config, "id": str(config.get("satellite", {}).get("id", "sat-0"))}]
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("satellites must be a non-empty list")
+
+    expanded = []
+    identifiers = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ValueError(f"satellites[{index}] must be a mapping")
+        identifier = str(entry.get("id", f"sat-{index}"))
+        if not identifier or identifier in identifiers:
+            raise ValueError(f"duplicate or empty satellite id: {identifier!r}")
+        identifiers.add(identifier)
+        item = dict(config)
+        item["id"] = identifier
+        item["orbit"] = _merge_config(config["orbit"], entry.get("orbit", {}))
+        item["satellite"] = _merge_config(
+            config["satellite"], entry.get("satellite", {})
+        )
+        expanded.append(item)
+    return expanded
+
+
+def build_spacecraft(config: dict, epoch_jd: float, trail_length: int) -> list[SpacecraftRuntime]:
+    """Construct independent propagator/state/trail bundles."""
+    return [
+        SpacecraftRuntime(
+            identifier=item["id"],
+            state=build_initial_state(item),
+            propagator=build_propagator(item, epoch_jd),
+            trail=deque(maxlen=trail_length),
+        )
+        for item in spacecraft_configs(config)
+    ]
 
 
 def build_propagator(config: dict, epoch_jd: float) -> Propagator:
@@ -149,7 +206,8 @@ def build_propagator(config: dict, epoch_jd: float) -> Propagator:
     return Propagator(prop_config)
 
 
-def build_telemetry(state: torch.Tensor, sim_time: float, epoch_jd: float) -> dict:
+def build_telemetry(state: torch.Tensor, sim_time: float, epoch_jd: float,
+                    identifier: str | None = None) -> dict:
     """Build telemetry dictionary from current state."""
     r = state[:3]
     v = state[3:6]
@@ -159,7 +217,7 @@ def build_telemetry(state: torch.Tensor, sim_time: float, epoch_jd: float) -> di
 
     oe = cartesian_to_keplerian(r, v)
 
-    return {
+    result = {
         "sim_time_s": sim_time,
         "position_eci_m": r.tolist(),
         "velocity_eci_ms": v.tolist(),
@@ -172,6 +230,28 @@ def build_telemetry(state: torch.Tensor, sim_time: float, epoch_jd: float) -> di
         "argp_deg": oe["argp"].item() / DEG2RAD,
         "true_anomaly_deg": oe["nu"].item() / DEG2RAD,
     }
+    if identifier is not None:
+        result["id"] = identifier
+    return result
+
+
+def build_constellation_telemetry(spacecraft: list[SpacecraftRuntime], sim_time: float,
+                                  epoch_jd: float, target_index: int) -> dict:
+    """Return backward-compatible primary fields plus all spacecraft records."""
+    records = [
+        build_telemetry(item.state, sim_time, epoch_jd, item.identifier)
+        for item in spacecraft
+    ]
+    for record, item in zip(records, spacecraft):
+        record["active"] = item.active
+    primary = dict(records[target_index])
+    primary.update({
+        "schema_version": 2,
+        "target_id": spacecraft[target_index].identifier,
+        "satellite_count": len(spacecraft),
+        "satellites": records,
+    })
+    return primary
 
 
 async def run_simulation(config: dict):
@@ -181,10 +261,6 @@ async def run_simulation(config: dict):
     epoch_dt = datetime(ep["year"], ep["month"], ep["day"],
                         ep["hour"], ep["minute"], ep["second"])
     epoch_jd = datetime_to_jd(epoch_dt)
-
-    # Initial state
-    state = build_initial_state(config)
-    propagator = build_propagator(config, epoch_jd)
 
     # Rendering setup
     renderer = None
@@ -225,9 +301,15 @@ async def run_simulation(config: dict):
             server = None
             print(f"Streaming server init failed (continuing without streaming): {e}")
 
-    # Trail buffer
     trail_length = render_cfg.get("trail_length", 500)
-    trail = deque(maxlen=trail_length)
+    spacecraft = build_spacecraft(config, epoch_jd, trail_length)
+    configured_target = render_cfg.get("camera_target")
+    target_id = (spacecraft[0].identifier if configured_target is None
+                 else str(configured_target))
+    target_by_id = {item.identifier: index for index, item in enumerate(spacecraft)}
+    if target_id not in target_by_id:
+        raise ValueError(f"unknown render.camera_target {target_id!r}")
+    target_index = target_by_id[target_id]
 
     # Simulation parameters
     env_dt = config.get("environment", {}).get("env_dt", 60.0)
@@ -243,8 +325,10 @@ async def run_simulation(config: dict):
 
     max_steps = config.get("environment", {}).get("max_steps", 0)  # 0 = unlimited
 
-    print(f"Starting simulation: epoch={epoch_dt.isoformat()}, dt={propagator.dt}s, env_dt={env_dt}s")
-    print(f"Initial altitude: {(torch.norm(state[:3]).item() - R_EARTH) * M2KM:.1f} km")
+    print(f"Starting simulation: epoch={epoch_dt.isoformat()}, spacecraft={len(spacecraft)}, "
+          f"dt={spacecraft[0].propagator.dt}s, env_dt={env_dt}s")
+    print(f"Camera target: {spacecraft[target_index].identifier}; initial altitude: "
+          f"{(torch.norm(spacecraft[target_index].state[:3]).item() - R_EARTH) * M2KM:.1f} km")
     print(f"Render: {render_fps}fps target, {steps_per_frame} sim steps per frame")
     print("Press Ctrl+C to stop")
 
@@ -255,18 +339,24 @@ async def run_simulation(config: dict):
             # Run propagation steps (yield to event loop between steps
             # so asyncio can process new client connections)
             for _ in range(steps_per_frame):
-                state, _ = propagator.propagate(state, env_dt, t0=sim_time)
+                for item in spacecraft:
+                    if not item.active:
+                        continue
+                    item.state, _ = item.propagator.propagate(
+                        item.state, env_dt, t0=sim_time
+                    )
+                    item.trail.append(item.state[:3].numpy().copy())
+                    if torch.norm(item.state[:3]).item() - R_EARTH < 100e3:
+                        item.active = False
                 sim_time += env_dt
                 step_count += 1
-                trail.append(state[:3].numpy().copy())
 
                 # Yield to event loop for connection handling
                 await asyncio.sleep(0)
 
                 if max_steps > 0 and step_count >= max_steps:
                     break
-                altitude = torch.norm(state[:3]).item() - R_EARTH
-                if altitude < 100e3:
+                if not any(item.active for item in spacecraft):
                     break
 
             # Render a video frame when EGL is available.
@@ -274,19 +364,25 @@ async def run_simulation(config: dict):
             if renderer is not None:
                 scene = scene_ephemeris(epoch_jd + sim_time / 86400.0)
 
-                trail_array = np.array(list(trail)) if len(trail) > 1 else None
+                positions = np.stack([item.state[:3].numpy() for item in spacecraft])
+                velocities = np.stack([item.state[3:6].numpy() for item in spacecraft])
+                trails = [np.asarray(item.trail) if len(item.trail) > 1 else None
+                          for item in spacecraft]
                 frame = renderer.render_frame(
-                    sat_positions=state[:3].numpy(),
+                    sat_positions=positions,
                     sun_pos=scene.sun_position_gcrf_m,
                     earth_rotation=scene.itrf_to_gcrf,
-                    trail_positions=trail_array,
-                    sat_velocity=state[3:6].numpy(),
+                    trail_positions=trails,
+                    sat_velocity=velocities[target_index],
+                    target_index=target_index,
                 )
 
             # Telemetry is physics-only and remains available in no-render mode
             # or when renderer initialisation fails.
             if server is not None:
-                telemetry = build_telemetry(state, sim_time, epoch_jd)
+                telemetry = build_constellation_telemetry(
+                    spacecraft, sim_time, epoch_jd, target_index
+                )
                 if frame is not None:
                     await server.send_video_frame(
                         frame, seq, sim_time,
@@ -296,7 +392,7 @@ async def run_simulation(config: dict):
 
             # Print status periodically
             if step_count % 100 == 0:
-                alt_km = (torch.norm(state[:3]).item() - R_EARTH) * M2KM
+                alt_km = (torch.norm(spacecraft[target_index].state[:3]).item() - R_EARTH) * M2KM
                 vc, tc = (0, 0) if server is None else server.client_count()
                 wall_fps = 1.0 / max(time.monotonic() - wall_start, 1e-6)
                 print(f"  Step {step_count}: t={sim_time:.0f}s, alt={alt_km:.1f}km, "
@@ -307,9 +403,8 @@ async def run_simulation(config: dict):
                 print(f"Reached max_steps ({max_steps})")
                 break
 
-            altitude = torch.norm(state[:3]).item() - R_EARTH
-            if altitude < 100e3:
-                print(f"Satellite reentered at altitude {altitude * M2KM:.1f} km")
+            if not any(item.active for item in spacecraft):
+                print("All satellites have reentered")
                 break
 
             # Pace: don't go faster than target FPS wall-clock
@@ -325,15 +420,11 @@ async def run_simulation(config: dict):
         if renderer is not None:
             renderer.cleanup()
 
-    print(f"Final state after {sim_time:.0f}s ({sim_time/3600:.1f}h):")
-    telemetry = build_telemetry(state, sim_time, epoch_jd)
-    for k, v in telemetry.items():
-        if isinstance(v, float):
-            print(f"  {k}: {v:.4f}")
-        elif isinstance(v, list):
-            print(f"  {k}: [{', '.join(f'{x:.1f}' for x in v)}]")
-        else:
-            print(f"  {k}: {v}")
+    print(f"Final states after {sim_time:.0f}s ({sim_time/3600:.1f}h):")
+    for item in spacecraft:
+        telemetry = build_telemetry(item.state, sim_time, epoch_jd, item.identifier)
+        print(f"  {item.identifier}: altitude={telemetry['altitude_km']:.4f} km, "
+              f"speed={telemetry['speed_ms']:.4f} m/s")
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -356,6 +447,10 @@ def build_argument_parser() -> argparse.ArgumentParser:
                         choices=["tracking", "fixed", "split", "ground_track",
                                  "nadir", "horizon", "onboard"],
                         help="Camera mode: 'tracking' (follows satellite), 'fixed' (inertial overview), 'split' (tracking + fixed), 'ground_track' (top-down nadir overview), 'nadir' (onboard camera pointed at Earth), 'horizon' (onboard camera pointed at horizon along velocity), 'onboard' (nadir + horizon split)")
+    parser.add_argument(
+        "--target", default=None,
+        help="Satellite id followed by tracking and onboard camera modes",
+    )
     return parser
 
 
@@ -371,6 +466,8 @@ def main():
         config.setdefault("propagator", {})["backend"] = args.backend
     if args.camera is not None:
         config.setdefault("render", {})["camera_mode"] = args.camera
+    if args.target is not None:
+        config.setdefault("render", {})["camera_target"] = args.target
     if args.no_render:
         config.setdefault("render", {})["enabled"] = False
     if args.no_stream:

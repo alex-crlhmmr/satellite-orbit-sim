@@ -1,0 +1,25 @@
+# Three-spacecraft example, merged onto config/default.yaml.
+# Run: satellite-orbit-sim --config config/constellation.yaml --camera fixed
+
+render:
+  camera_target: chief
+
+satellites:
+  - id: chief
+    orbit:
+      raan_deg: 0.0
+      true_anomaly_deg: 0.0
+
+  - id: deputy-1
+    orbit:
+      raan_deg: 0.0
+      true_anomaly_deg: 10.0
+
+  - id: deputy-2
+    orbit:
+      raan_deg: 120.0
+      true_anomaly_deg: 0.0
+    satellite:
+      mass_kg: 120.0
+      drag_area_m2: 1.2
+      srp_area_m2: 1.2

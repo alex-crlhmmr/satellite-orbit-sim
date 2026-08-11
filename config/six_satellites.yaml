@@ -1,0 +1,72 @@
+# Six-spacecraft visualization demo with separated planes and orbital phases.
+# Values inherit from config/default.yaml unless overridden here.
+
+environment:
+  max_steps: 0
+
+render:
+  camera_mode: fixed
+  camera_target: polar-a
+  fps: 15
+  trail_length: 900
+
+stream:
+  video_port: 9110
+  telemetry_port: 9111
+  http_port: 8084
+  jpeg_quality: 75
+
+satellites:
+  - id: equatorial-a
+    orbit:
+      semi_major_axis_m: 6878137.0
+      eccentricity: 0.0010
+      inclination_deg: 5.0
+      raan_deg: 0.0
+      arg_periapsis_deg: 0.0
+      true_anomaly_deg: 20.0
+
+  - id: mid-inclination-a
+    orbit:
+      semi_major_axis_m: 6928137.0
+      eccentricity: 0.0020
+      inclination_deg: 35.0
+      raan_deg: 60.0
+      arg_periapsis_deg: 40.0
+      true_anomaly_deg: 170.0
+
+  - id: iss-inclination
+    orbit:
+      semi_major_axis_m: 6778137.0
+      eccentricity: 0.0001
+      inclination_deg: 51.6
+      raan_deg: 120.0
+      arg_periapsis_deg: 80.0
+      true_anomaly_deg: 290.0
+
+  - id: high-inclination
+    orbit:
+      semi_major_axis_m: 7078137.0
+      eccentricity: 0.0030
+      inclination_deg: 70.0
+      raan_deg: 180.0
+      arg_periapsis_deg: 120.0
+      true_anomaly_deg: 100.0
+
+  - id: polar-a
+    orbit:
+      semi_major_axis_m: 6978137.0
+      eccentricity: 0.0015
+      inclination_deg: 90.0
+      raan_deg: 240.0
+      arg_periapsis_deg: 160.0
+      true_anomaly_deg: 230.0
+
+  - id: sun-synchronous-like
+    orbit:
+      semi_major_axis_m: 7128137.0
+      eccentricity: 0.0025
+      inclination_deg: 97.4
+      raan_deg: 300.0
+      arg_periapsis_deg: 210.0
+      true_anomaly_deg: 340.0

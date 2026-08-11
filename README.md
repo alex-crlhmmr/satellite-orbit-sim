@@ -109,6 +109,8 @@ python main.py --steps 5000
 python main.py --no-render --no-stream --steps 1440
 satellite-orbit-sim --backend legacy
 satellite-orbit-sim --config config/legacy.yaml
+satellite-orbit-sim --config config/constellation.yaml --camera fixed
+satellite-orbit-sim --config config/constellation.yaml --target deputy-1
 python main.py --camera tracking
 python main.py --camera fixed
 python main.py --camera split
@@ -130,11 +132,20 @@ Major sections:
 
 - `orbit`: initial osculating Keplerian elements
 - `satellite`: mass, coefficients, drag area and illuminated area
+- `satellites`: optional constellation list with per-object `id`, `orbit`, and
+  `satellite` overrides; singular blocks supply inherited defaults
 - `propagator.high_fidelity`: supported Brahe research settings
 - `propagator.legacy`: local RK4/J2–J6 and optional box-wing settings
 - `atmosphere`: legacy-backend MSIS-2/USSA76 settings only
 - `render` and `stream`: UI and network settings
 - `environment`: experimental RL episode settings
+
+Each constellation member owns an independent state, propagator, covariance
+and trail. Telemetry schema version 2 retains the camera target's top-level
+fields for compatibility and adds `satellites`, `satellite_count` and
+`target_id`. Set `render.camera_target` to choose the tracked member. The
+high-fidelity backend currently propagates members sequentially, so benchmark
+the intended constellation size and update rate on deployment hardware.
 
 The default satellite is a generic 100 kg, 1 m² ISS-orbit scenario—not a
 specific flight vehicle. Change the mass, areas and coefficients for the
