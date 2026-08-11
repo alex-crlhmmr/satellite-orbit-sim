@@ -7,8 +7,9 @@ AWS Open Data bucket. Products contain 10-second Earth-fixed states, carry a
 
 The immutable checksummed manifest prevents silent dataset changes. Quiet
 April 2024 arcs are split chronologically into train and validation sets. The
-10–11 May Gannon geomagnetic superstorm is a locked test set and never
-participates in parameter selection.
+10–11 May Gannon storm is validation data because it was observed during
+estimator development. The later 10–12 October 2024 storm was frozen before
+its first benchmark run and is the untouched final test set.
 
 ```bash
 python validation/real_data/fetch.py /tmp/sentinel1-pod

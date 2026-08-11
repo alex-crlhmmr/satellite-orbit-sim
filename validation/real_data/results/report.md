@@ -28,9 +28,15 @@ Equivalent density/ballistic scale versus the 10 m² nominal baseline: 0.2274
 | 20240408 | train | quiet | fitted | 3394.574 m | 3393.485 m | 7300.024 m |
 | 20240415 | validation | quiet | nominal | 238.771 m | 238.695 m | 491.011 m |
 | 20240415 | validation | quiet | fitted | 87.593 m | 87.422 m | 231.656 m |
-| 20240509 | test | storm | nominal | 562.512 m | 562.404 m | 1207.142 m |
-| 20240509 | test | storm | fitted | 42.373 m | 42.072 m | 34.207 m |
-| 20240510 | test | storm | nominal | 1463.561 m | 1463.352 m | 2945.874 m |
-| 20240510 | test | storm | fitted | 605.747 m | 605.651 m | 998.944 m |
+| 20240509 | validation | storm | nominal | 562.512 m | 562.404 m | 1207.142 m |
+| 20240509 | validation | storm | fitted | 42.373 m | 42.072 m | 34.207 m |
+| 20240510 | validation | storm | nominal | 1463.561 m | 1463.352 m | 2945.874 m |
+| 20240510 | validation | storm | fitted | 605.747 m | 605.651 m | 998.944 m |
+| 20241009 | test | storm | nominal | 772.084 m | 771.940 m | 1701.885 m |
+| 20241009 | test | storm | fitted | 62.187 m | 62.113 m | 101.126 m |
+| 20241010 | test | storm | nominal | 431.631 m | 431.501 m | 1042.280 m |
+| 20241010 | test | storm | fitted | 351.728 m | 351.646 m | 682.602 m |
+| 20241011 | test | storm | nominal | 3237.331 m | 3236.980 m | 6102.294 m |
+| 20241011 | test | storm | fitted | 2721.243 m | 2720.970 m | 4950.697 m |
 
 Parameters are fitted only on `train`; validation and storm test arcs are locked.

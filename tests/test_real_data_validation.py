@@ -20,7 +20,7 @@ def test_manifest_has_immutable_disjoint_splits():
         "train", "validation", "test"
     }
     assert all(len(entry["sha256"]) == 64 for entry in manifest["files"])
-    assert all(entry["split"] == "test" for entry in manifest["files"]
+    assert all(entry["split"] != "train" for entry in manifest["files"]
                if entry["regime"] == "storm")
 
 

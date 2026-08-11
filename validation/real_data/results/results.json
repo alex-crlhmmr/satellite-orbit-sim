@@ -2,7 +2,7 @@
   "protocol_version": 1,
   "passed": true,
   "fitted_drag_area_m2": 2.2743028780956864,
-  "validation_rms_improvement_fraction": 0.633151416489516,
+  "validation_rms_improvement_fraction": 0.6751595418407591,
   "effective_drag_scale": 0.22743028780956864,
   "dataset_files": [
     {
@@ -62,12 +62,30 @@
     {
       "filename": "S1A_OPER_AUX_POEORB_OPOD_20240530T070820_V20240509T225942_20240511T005942.EOF",
       "sha256": "808e8efdf845440ee5a91d216f42ca5e770803d50b0fafcf17d9bacfbb61403b",
-      "split": "test",
+      "split": "validation",
       "regime": "storm"
     },
     {
       "filename": "S1A_OPER_AUX_POEORB_OPOD_20240531T070832_V20240510T225942_20240512T005942.EOF",
       "sha256": "b687a5dd534425723864a87ccbac0a1282f5c7c8ff47dd6af692b5d779e63caa",
+      "split": "validation",
+      "regime": "storm"
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241030T070550_V20241009T225942_20241011T005942.EOF",
+      "sha256": "d721a5637e0579ed804c9e8987a73da747242014aa7f13089dc83562c508dbf3",
+      "split": "test",
+      "regime": "storm"
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241031T070644_V20241010T225942_20241012T005942.EOF",
+      "sha256": "0c5dee7a64ec92801dfa3e44d1b759b77d9677b706737c7cfa50980803afaf90",
+      "split": "test",
+      "regime": "storm"
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241101T070639_V20241011T225942_20241013T005942.EOF",
+      "sha256": "4cdcc8af6acf668dac56a4ea62cfd6cf0f2b060bab6637dcfcdeba53ac024196",
       "split": "test",
       "regime": "storm"
     }
@@ -82,7 +100,7 @@
     1.1814855992556907,
     181.4045861448427
   ],
-  "storm_test_rms_change_fraction": -0.6801101580456383,
+  "storm_test_rms_change_fraction": -0.29404964392802724,
   "metrics": [
     {
       "filename": "S1A_OPER_AUX_POEORB_OPOD_20240422T070751_V20240401T225942_20240403T005942.EOF",
@@ -338,7 +356,7 @@
     },
     {
       "filename": "S1A_OPER_AUX_POEORB_OPOD_20240530T070820_V20240509T225942_20240511T005942.EOF",
-      "split": "test",
+      "split": "validation",
       "regime": "storm",
       "model": "nominal",
       "drag_area_m2": 10.0,
@@ -352,7 +370,7 @@
     },
     {
       "filename": "S1A_OPER_AUX_POEORB_OPOD_20240530T070820_V20240509T225942_20240511T005942.EOF",
-      "split": "test",
+      "split": "validation",
       "regime": "storm",
       "model": "fitted",
       "drag_area_m2": 2.2743028780956864,
@@ -366,7 +384,7 @@
     },
     {
       "filename": "S1A_OPER_AUX_POEORB_OPOD_20240531T070832_V20240510T225942_20240512T005942.EOF",
-      "split": "test",
+      "split": "validation",
       "regime": "storm",
       "model": "nominal",
       "drag_area_m2": 10.0,
@@ -380,7 +398,7 @@
     },
     {
       "filename": "S1A_OPER_AUX_POEORB_OPOD_20240531T070832_V20240510T225942_20240512T005942.EOF",
-      "split": "test",
+      "split": "validation",
       "regime": "storm",
       "model": "fitted",
       "drag_area_m2": 2.2743028780956864,
@@ -391,6 +409,90 @@
       "final_along_track_m": 998.8732718540349,
       "final_cross_track_m": 2.8829569465023055,
       "rms_along_track_m": 605.6514666894184
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241030T070550_V20241009T225942_20241011T005942.EOF",
+      "split": "test",
+      "regime": "storm",
+      "model": "nominal",
+      "drag_area_m2": 10.0,
+      "final_position_m": 1701.8847718161828,
+      "rms_position_m": 772.0836772663237,
+      "p95_position_m": 1515.61902385215,
+      "final_radial_m": -16.01019400649086,
+      "final_along_track_m": 1701.8053206255572,
+      "final_cross_track_m": 3.7551189381703756,
+      "rms_along_track_m": 771.9404989504299
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241030T070550_V20241009T225942_20241011T005942.EOF",
+      "split": "test",
+      "regime": "storm",
+      "model": "fitted",
+      "drag_area_m2": 2.2743028780956864,
+      "final_position_m": 101.12642390839349,
+      "rms_position_m": 62.18662444641769,
+      "p95_position_m": 106.2061075453261,
+      "final_radial_m": 4.425851974304024,
+      "final_along_track_m": 100.96275216914725,
+      "final_cross_track_m": 3.672617762986006,
+      "rms_along_track_m": 62.11251143749529
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241031T070644_V20241010T225942_20241012T005942.EOF",
+      "split": "test",
+      "regime": "storm",
+      "model": "nominal",
+      "drag_area_m2": 10.0,
+      "final_position_m": 1042.2796398994674,
+      "rms_position_m": 431.6305280928709,
+      "p95_position_m": 909.1651139284778,
+      "final_radial_m": -18.07681965947778,
+      "final_along_track_m": 1042.122859987602,
+      "final_cross_track_m": 0.14502145713745182,
+      "rms_along_track_m": 431.5014615708047
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241031T070644_V20241010T225942_20241012T005942.EOF",
+      "split": "test",
+      "regime": "storm",
+      "model": "fitted",
+      "drag_area_m2": 2.2743028780956864,
+      "final_position_m": 682.6017168364192,
+      "rms_position_m": 351.72777229167497,
+      "p95_position_m": 654.5861638086848,
+      "final_radial_m": 11.241661964460695,
+      "final_along_track_m": -682.5091380568348,
+      "final_cross_track_m": -0.07302890035777732,
+      "rms_along_track_m": 351.6460333607389
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241101T070639_V20241011T225942_20241013T005942.EOF",
+      "split": "test",
+      "regime": "storm",
+      "model": "nominal",
+      "drag_area_m2": 10.0,
+      "final_position_m": 6102.293640497279,
+      "rms_position_m": 3237.3306263240934,
+      "p95_position_m": 5669.852906608062,
+      "final_radial_m": -51.68371684950945,
+      "final_along_track_m": 6102.074070907779,
+      "final_cross_track_m": -2.915719656350134,
+      "rms_along_track_m": 3236.98011634238
+    },
+    {
+      "filename": "S1A_OPER_AUX_POEORB_OPOD_20241101T070639_V20241011T225942_20241013T005942.EOF",
+      "split": "test",
+      "regime": "storm",
+      "model": "fitted",
+      "drag_area_m2": 2.2743028780956864,
+      "final_position_m": 4950.696546041363,
+      "rms_position_m": 2721.242783520319,
+      "p95_position_m": 4635.6117202417745,
+      "final_radial_m": -38.04768271431426,
+      "final_along_track_m": 4950.549652102993,
+      "final_cross_track_m": -2.609001511553284,
+      "rms_along_track_m": 2720.970474063407
     }
   ]
 }
