@@ -53,6 +53,7 @@ atmosphere:
   f107: 150.0                     # daily 10.7cm solar radio flux [sfu] (typical 70-300)
   f107a: 150.0                    # 81-day-centred average F10.7 [sfu]
   ap: 4.0                         # geomagnetic Ap index (quiet ~4, storm 50+)
+  # wind_ecef_mps: [0.0, 0.0, 0.0]  # optional specified neutral-wind sensitivity input
 
 # Epoch (J2000 + offset)
 epoch:

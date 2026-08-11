@@ -35,7 +35,7 @@ from core.frames import (
     eci_to_rtn,
     gmst_from_jd,
 )
-from core.atmosphere import atmospheric_density
+from core.atmosphere import atmospheric_density, drag_acceleration, make_atmosphere
 from core.atmosphere import _ecef_to_geodetic
 from core.gravity import (
     j2_acceleration, j3_acceleration, j4_acceleration,
@@ -124,6 +124,26 @@ def test_geometry_changes_drag_with_attitude_relative_flow():
     along = geometry.area_mass_ratio_lvlh(r, v, v, 100.0)
     nadir = geometry.area_mass_ratio_lvlh(r, v, -r, 100.0)
     assert nadir == 2.0 * along
+
+
+def test_specified_neutral_wind_changes_relative_drag_velocity():
+    r = np.array([R_EARTH + 200e3, 0.0, 0.0])
+    v = np.array([0.0, 7800.0, 0.0])
+    calm = make_atmosphere({"model": "ussa76"})
+    # At J2000 GMST, construct ECEF wind which rotates to +ECI Y.
+    angle = gmst_from_jd(JD_J2000)
+    wind_ecef = [100.0 * np.sin(angle), 100.0 * np.cos(angle), 0.0]
+    windy = make_atmosphere({"model": "ussa76", "wind_ecef_mps": wind_ecef})
+    calm_drag = np.linalg.norm(drag_acceleration(r, v, 2.2, 0.01,
+                                                atmosphere=calm, jd=JD_J2000))
+    windy_drag = np.linalg.norm(drag_acceleration(r, v, 2.2, 0.01,
+                                                 atmosphere=windy, jd=JD_J2000))
+    assert windy_drag < calm_drag
+
+
+def test_unknown_atmosphere_never_silently_falls_back():
+    with pytest.raises(ValueError, match="unknown atmosphere model"):
+        make_atmosphere({"model": "dtm2020_typo"})
 
 
 # ===========================================================================

@@ -17,6 +17,10 @@ The simulator has two deliberately separate dynamics profiles.
 - state transition matrix and 6x6 covariance propagation
 - optional continuous white-acceleration process noise in RTN; it defaults to
   zero until a representative tracking-data campaign calibrates its PSD
+- a reusable scalar random-walk Kalman estimator for effective density/ballistic
+  scale, including propagated variance and normalized-innovation diagnostics;
+  it is not enabled by default until a measurement source and calibrated noise
+  protocol are configured
 
 Brahe caches EOP, space-weather, and ephemeris data under `~/.cache/brahe`.
 The first research-profile start therefore needs internet access; later starts
@@ -36,7 +40,7 @@ substitute for mission attitude telemetry.
 ## Explicitly not yet claimed
 
 Earth albedo/infrared radiation pressure, horizontal winds, estimated
-empirical accelerations, stochastic density scale-factor estimation, and a
+empirical accelerations, operational integration of density-scale measurements, and a
 completed independent GMAT/Orekit truth-data campaign are not implemented.
 JB2008 and DTM2020 adapters are also not implemented. The real-data validation
 does include a frozen-arc comparison of exponential, Harris-Priester, and
