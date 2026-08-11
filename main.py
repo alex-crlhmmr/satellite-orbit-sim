@@ -25,12 +25,39 @@ from core.propagator import Propagator
 from core.srp import sun_position_eci
 
 
-def load_config(path: str = None) -> dict:
-    """Load configuration from YAML file."""
-    if path is None:
-        path = Path(__file__).parent / "config" / "default.yaml"
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+def _merge_config(base: dict, override: dict) -> dict:
+    """Recursively merge a configuration override without mutating either input."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_config(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _read_yaml_mapping(path: Path) -> dict:
+    try:
+        with path.open("r", encoding="utf-8") as config_file:
+            content = yaml.safe_load(config_file)
+    except FileNotFoundError as exc:
+        raise ValueError(f"configuration file not found: {path}") from exc
+    except yaml.YAMLError as exc:
+        raise ValueError(f"invalid YAML configuration in {path}: {exc}") from exc
+    if content is None:
+        return {}
+    if not isinstance(content, dict):
+        raise ValueError(f"configuration root must be a mapping: {path}")
+    return content
+
+
+def load_config(path: str | Path | None = None) -> dict:
+    """Load defaults and apply an optional, minimal YAML override file."""
+    default_path = Path(__file__).parent / "config" / "default.yaml"
+    config = _read_yaml_mapping(default_path)
+    if path is not None:
+        config = _merge_config(config, _read_yaml_mapping(Path(path).expanduser()))
+    return config
 
 
 def build_initial_state(config: dict) -> torch.Tensor:
@@ -310,10 +337,16 @@ async def run_simulation(config: dict):
             print(f"  {k}: {v}")
 
 
-def main():
+def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="LEO Satellite Orbital Simulation")
-    parser.add_argument("--config", type=str, default=None,
-                        help="Path to YAML config file")
+    parser.add_argument(
+        "--config", type=Path, default=None,
+        help="Path to a YAML override merged onto config/default.yaml",
+    )
+    parser.add_argument(
+        "--backend", choices=["high_fidelity", "legacy"], default=None,
+        help="Override the propagator backend selected by the configuration",
+    )
     parser.add_argument("--no-render", action="store_true",
                         help="Disable rendering")
     parser.add_argument("--no-stream", action="store_true",
@@ -324,10 +357,19 @@ def main():
                         choices=["tracking", "fixed", "split", "ground_track",
                                  "nadir", "horizon", "onboard"],
                         help="Camera mode: 'tracking' (follows satellite), 'fixed' (inertial overview), 'split' (tracking + fixed), 'ground_track' (top-down nadir overview), 'nadir' (onboard camera pointed at Earth), 'horizon' (onboard camera pointed at horizon along velocity), 'onboard' (nadir + horizon split)")
-    args = parser.parse_args()
+    return parser
 
-    config = load_config(args.config)
 
+def main():
+    args = build_argument_parser().parse_args()
+
+    try:
+        config = load_config(args.config)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    if args.backend is not None:
+        config.setdefault("propagator", {})["backend"] = args.backend
     if args.camera is not None:
         config.setdefault("render", {})["camera_mode"] = args.camera
     if args.no_render:

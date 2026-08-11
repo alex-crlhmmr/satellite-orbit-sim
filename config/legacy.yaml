@@ -1,0 +1,4 @@
+# Minimal override for the transparent fixed-step RK4/J2-J6 backend.
+# All unspecified settings are inherited from config/default.yaml.
+propagator:
+  backend: legacy
