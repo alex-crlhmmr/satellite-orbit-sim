@@ -49,3 +49,24 @@ and geometry (or accelerometer) data.
 
 Dataset provenance: [ASF Sentinel-1 POD Open Data](https://registry.opendata.aws/s1-orbits/).
 Swarm provenance: [ESA Swarm SP3 COM product catalogue](https://swarm-disc.github.io/product-catalogue-tools/SW_SP3xCOM_2_.html).
+
+## Atmosphere ablation
+
+The same frozen Swarm arcs can be evaluated with every atmosphere currently
+provided by the validated Brahe backend. The exponential case is a deliberately
+simple single-scale-height control anchored at 400 km, not a modern empirical
+climatology:
+
+```bash
+python validation/real_data/compare_atmospheres.py \
+  --data /tmp/swarm-pod \
+  --manifest validation/real_data/swarm_manifest.yaml \
+  --protocol validation/real_data/swarm_protocol.yaml \
+  --output validation/real_data/swarm_atmosphere_comparison
+```
+
+This is an apples-to-apples force-model ablation, but it still refits one
+effective ballistic parameter per atmosphere. It ranks predictive orbit
+residuals under that protocol; it does not independently identify true density.
+JB2008 and DTM2020 remain future adapters and must not be claimed until their
+implementations and required indices are versioned and validated.

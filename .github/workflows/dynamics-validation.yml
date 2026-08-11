@@ -67,3 +67,15 @@ jobs:
         with:
           name: swarm-validation-report
           path: /tmp/swarm-validation
+      - name: Frozen Swarm atmosphere comparison
+        run: |
+          python validation/real_data/compare_atmospheres.py \
+            --data /tmp/swarm-pod \
+            --manifest validation/real_data/swarm_manifest.yaml \
+            --protocol validation/real_data/swarm_protocol.yaml \
+            --output /tmp/swarm-atmospheres
+          python -c 'import json; d=json.load(open("/tmp/swarm-atmospheres/comparison.json")); r={x["model"]:x for x in d["models"]}; assert all(r["nrlmsise00"][k] == min(x[k] for x in r.values()) for k in ("fitted_validation_mean_rms_m", "fitted_test_mean_rms_m"))'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: swarm-atmosphere-comparison
+          path: /tmp/swarm-atmospheres

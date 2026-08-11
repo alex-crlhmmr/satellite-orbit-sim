@@ -7,6 +7,7 @@ atmospheric density, Sun ephemeris, and batched operations.
 """
 
 import math
+import numpy as np
 import pytest
 import torch
 
@@ -42,6 +43,7 @@ from core.gravity import (
 )
 from core.srp import sun_position_eci
 from core.propagator import Propagator
+from core.aerodynamics import BoxWingGeometry, lvlh_body_to_eci
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +98,32 @@ def _specific_energy(r, v, mu=MU_EARTH):
 def _angular_momentum(r, v):
     """Return angular momentum vector h = r x v."""
     return torch.cross(r, v, dim=-1)
+
+
+def test_lvlh_attitude_and_box_projected_area():
+    r = np.array([7.0e6, 0.0, 0.0])
+    v = np.array([0.0, 7500.0, 0.0])
+    dcm = lvlh_body_to_eci(r, v)
+    np.testing.assert_allclose(dcm.T @ dcm, np.eye(3), atol=1e-15)
+    np.testing.assert_allclose(dcm[:, 0], [0.0, 1.0, 0.0])
+    np.testing.assert_allclose(dcm[:, 2], [-1.0, 0.0, 0.0])
+    geometry = BoxWingGeometry.from_config({
+        "box_dimensions_m": [2.0, 3.0, 4.0],
+        "panels": [{"normal_body": [1.0, 0.0, 0.0], "area_m2": 5.0}],
+    })
+    assert geometry.projected_area(np.array([1.0, 0.0, 0.0])) == 17.0
+    assert geometry.projected_area(np.array([0.0, 1.0, 0.0])) == 8.0
+
+
+def test_geometry_changes_drag_with_attitude_relative_flow():
+    geometry = BoxWingGeometry.from_config(
+        {"box_dimensions_m": [2.0, 1.0, 1.0], "panels": []}
+    )
+    r = np.array([R_EARTH + 200e3, 0.0, 0.0])
+    v = np.array([0.0, 7800.0, 0.0])
+    along = geometry.area_mass_ratio_lvlh(r, v, v, 100.0)
+    nadir = geometry.area_mass_ratio_lvlh(r, v, -r, 100.0)
+    assert nadir == 2.0 * along
 
 
 # ===========================================================================

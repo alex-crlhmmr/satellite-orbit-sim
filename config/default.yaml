@@ -39,6 +39,13 @@ propagator:
     # Continuous white-acceleration PSD in RTN [m²/s³]. Zero until calibrated
     # against representative tracking residuals; never invent confidence.
     process_noise_acceleration_psd_rtn: [0.0, 0.0, 0.0]
+    # Optional first-order attitude-aware drag geometry. When enabled, the
+    # legacy constant area_mass is replaced by projected area / mass at every
+    # force evaluation, assuming +X along-track / +Z nadir LVLH attitude.
+    # drag_geometry:
+    #   box_dimensions_m: [1.0, 1.0, 1.0]
+    #   panels:
+    #     - {normal_body: [0.0, 0.0, 1.0], area_m2: 2.0}
 
 # Atmosphere model (used by drag)
 atmosphere:
