@@ -252,8 +252,15 @@ class StreamingServer:
                     ch.put(data)
 
         if http_clients:
+            # The browser HUD consumes only the selected target's top-level
+            # fields. Avoid duplicating the complete constellation over SSE;
+            # binary telemetry retains the full schema for API consumers.
+            browser_telemetry = {
+                key: value for key, value in telemetry_dict.items()
+                if key != "satellites"
+            }
             payload = json.dumps(
-                {**telemetry_dict, "seq": seq}, separators=(",", ":")
+                {**browser_telemetry, "seq": seq}, separators=(",", ":")
             ).encode("utf-8")
             for ch in list(self._http_telemetry_channels):
                 if ch.closed:

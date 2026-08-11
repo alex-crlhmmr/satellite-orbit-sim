@@ -217,12 +217,24 @@
     hud.innerHTML = lines.map(l => `<div class="row">${l}</div>`).join("");
   }
 
-  const es = new EventSource("/telemetry.sse");
-  es.onopen    = () => { conn.classList.remove("off"); };
-  es.onerror   = () => { if (!receivedWebRTC) conn.classList.add("off"); };
-  es.onmessage = (e) => {
-    try { render(JSON.parse(e.data)); } catch (_) {}
-  };
+  let telemetryRetry = null;
+  function connectTelemetry() {
+    const es = new EventSource("/telemetry.sse");
+    es.onopen = () => {
+      clearTimeout(telemetryRetry);
+      conn.classList.remove("off");
+    };
+    es.onerror = () => {
+      es.close();
+      if (!receivedWebRTC) conn.classList.add("off");
+      clearTimeout(telemetryRetry);
+      telemetryRetry = setTimeout(connectTelemetry, 1000);
+    };
+    es.onmessage = (event) => {
+      try { render(JSON.parse(event.data)); } catch (_) {}
+    };
+  }
+  connectTelemetry();
 </script>
 </body>
 </html>

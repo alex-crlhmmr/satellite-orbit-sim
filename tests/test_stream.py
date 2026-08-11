@@ -151,6 +151,7 @@ def test_browser_viewer_prefers_webrtc_and_retains_mjpeg_fallback():
     assert 'type: "offer"' in html
     assert "setTimeout(connectMJPEG" in html
     assert "/video.mjpg?t=${Date.now()}" in html
+    assert "setTimeout(connectTelemetry, 1000)" in html
 
 
 def test_webrtc_only_frame_avoids_jpeg_encoding(monkeypatch):
@@ -171,3 +172,34 @@ def test_webrtc_only_frame_avoids_jpeg_encoding(monkeypatch):
     asyncio.run(server.send_video_frame(frame, 1, 0.0))
     assert len(server._webrtc.frames) == 1
     assert server._webrtc.frames[0] is frame
+
+
+def test_browser_telemetry_omits_constellation_payload():
+    class _FakeChannel:
+        closed = False
+
+        def __init__(self):
+            self.payload = None
+
+        def put(self, payload):
+            self.payload = payload
+
+    server = StreamingServer()
+    channel = _FakeChannel()
+    server._http_telemetry_channels.append(channel)
+    telemetry = {
+        "altitude_km": 550.0,
+        "target_id": "sat-01",
+        "satellite_count": 20,
+        "satellites": [{"id": f"sat-{index:02d}"} for index in range(20)],
+    }
+
+    asyncio.run(server.send_telemetry(telemetry, seq=7, sim_time=35.0))
+
+    browser_payload = json.loads(channel.payload)
+    assert browser_payload == {
+        "altitude_km": 550.0,
+        "target_id": "sat-01",
+        "satellite_count": 20,
+        "seq": 7,
+    }
