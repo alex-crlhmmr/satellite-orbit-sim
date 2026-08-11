@@ -179,6 +179,13 @@ The server exposes three listeners by default:
 - TCP 9101: binary JSON telemetry
 - HTTP 8080: browser viewer
 
+On Jetson, `stream.webrtc_enabled` adds a WebSocket signalling listener and
+feeds RGB render frames through `nvvidconv`, `nvv4l2h264enc`, RTP and
+`webrtcbin`. Negotiation dynamically selects a compatible browser-offered H.264
+payload. Frame submission begins only after SDP completes, preventing a fatal
+pre-negotiation `appsrc` stream error. MJPEG remains a fallback and is not
+encoded when only WebRTC clients are present.
+
 The binary frame header is 21 bytes:
 
 ```text
@@ -215,7 +222,7 @@ physics-only. Optional groups are:
 - `render`: moderngl and Pillow
 - `viewer`: OpenCV
 - `rl`: Gymnasium
-- `dev`: pytest and Ruff
+- `dev`: pytest, Ruff and aiortc for the WebRTC decode/cadence probe
 - `all`: all runtime features
 
 `uv.lock` pins the ordinary macOS/Linux development graph. Jetson users must

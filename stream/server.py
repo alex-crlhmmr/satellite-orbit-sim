@@ -9,6 +9,7 @@ Three concurrent servers run inside one StreamingServer instance:
     GET /              -> HTML viewer page
     GET /video.mjpg    -> multipart/x-mixed-replace MJPEG stream
     GET /telemetry.sse -> Server-Sent Events (JSON)
+* optional WebRTC signalling (port 8081, default) — Jetson hardware H.264
 
 Every video and telemetry client gets a single-slot latest-value buffer
 that drops stale data if the consumer falls behind. The simulation loop
@@ -120,12 +121,23 @@ class StreamingServer:
         telemetry_port: int = 9101,
         http_port: int = 8080,
         jpeg_quality: int = 85,
+        webrtc_enabled: bool = False,
+        webrtc_port: int = 8081,
+        webrtc_width: int = 1280,
+        webrtc_height: int = 720,
+        webrtc_fps: int = 15,
+        webrtc_bitrate: int = 3_000_000,
     ) -> None:
         self._bind_host = bind_host
         self._video_port = video_port
         self._telemetry_port = telemetry_port
         self._http_port = http_port
         self._jpeg_quality = jpeg_quality
+        self._webrtc = None
+        self._webrtc_config = (
+            webrtc_enabled, webrtc_port, webrtc_width, webrtc_height,
+            webrtc_fps, webrtc_bitrate,
+        )
 
         self._binary_video_channels: List[_FrameChannel] = []
         self._http_video_channels: List[_FrameChannel] = []
@@ -154,11 +166,21 @@ class StreamingServer:
             self._servers.append(await asyncio.start_server(
                 self._handle_http, self._bind_host, self._http_port
             ))
+            enabled, port, width, height, fps, bitrate = self._webrtc_config
+            if enabled:
+                from .webrtc import WebRTCServer
+                self._webrtc = WebRTCServer(
+                    self._bind_host, port, width, height, fps, bitrate
+                )
+                await self._webrtc.start()
         except Exception:
             await self.stop()
             raise
 
     async def stop(self) -> None:
+        if self._webrtc is not None:
+            await self._webrtc.stop()
+            self._webrtc = None
         for server in self._servers:
             try:
                 server.close()
@@ -184,6 +206,8 @@ class StreamingServer:
     async def send_video_frame(
         self, rgb_array: np.ndarray, seq: int, sim_time: float
     ) -> None:
+        if self._webrtc is not None:
+            self._webrtc.push_frame(rgb_array)
         has_binary = bool(self._binary_video_channels)
         has_http = bool(self._http_video_channels)
         if not (has_binary or has_http):
@@ -451,6 +475,8 @@ class StreamingServer:
     # ------------------------------ stats --------------------------------
 
     def client_count(self) -> Tuple[int, int]:
-        v = len(self._binary_video_channels) + len(self._http_video_channels)
+        webrtc_clients = 0 if self._webrtc is None else self._webrtc.client_count()
+        v = (len(self._binary_video_channels) + len(self._http_video_channels)
+             + webrtc_clients)
         t = len(self._binary_telemetry_channels) + len(self._http_telemetry_channels)
         return v, t

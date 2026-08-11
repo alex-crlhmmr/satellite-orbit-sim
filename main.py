@@ -291,12 +291,20 @@ async def run_simulation(config: dict):
                 telemetry_port=stream_cfg.get("telemetry_port", 9101),
                 http_port=stream_cfg.get("http_port", 8080),
                 jpeg_quality=stream_cfg.get("jpeg_quality", 85),
+                webrtc_enabled=stream_cfg.get("webrtc_enabled", False),
+                webrtc_port=stream_cfg.get("webrtc_port", 8081),
+                webrtc_width=render_cfg.get("width", 1280),
+                webrtc_height=render_cfg.get("height", 720),
+                webrtc_fps=render_cfg.get("fps", 15),
+                webrtc_bitrate=stream_cfg.get("webrtc_bitrate", 3_000_000),
             )
             await server.start()
             vp = stream_cfg.get("video_port", 9100)
             tp = stream_cfg.get("telemetry_port", 9101)
             hp = stream_cfg.get("http_port", 8080)
             print(f"Streaming server started: binary {vp}/{tp}, http {hp}  (browser: http://localhost:{hp})")
+            if stream_cfg.get("webrtc_enabled", False):
+                print(f"WebRTC H.264 signalling: {stream_cfg.get('webrtc_port', 8081)}")
         except Exception as e:
             server = None
             print(f"Streaming server init failed (continuing without streaming): {e}")

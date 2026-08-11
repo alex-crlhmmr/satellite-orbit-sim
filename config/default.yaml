@@ -106,3 +106,6 @@ stream:
   telemetry_port: 9101            # binary TCP telemetry (optional packaged viewer)
   http_port: 8080                 # browser viewer: http://localhost:8080
   jpeg_quality: 85
+  webrtc_enabled: false           # Jetson H.264 WebRTC; MJPEG remains fallback
+  webrtc_port: 8081               # WebSocket signalling port
+  webrtc_bitrate: 3000000         # target bitrate [bit/s]

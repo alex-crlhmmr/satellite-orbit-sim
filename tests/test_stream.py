@@ -144,9 +144,30 @@ def test_start_rolls_back_partially_opened_servers(monkeypatch):
     assert server._servers == []
 
 
-def test_browser_viewer_reconnects_video_stream():
+def test_browser_viewer_prefers_webrtc_and_retains_mjpeg_fallback():
     html = (StreamingServer()._viewer_html).decode("utf-8")
 
-    assert "video.onerror" in html
-    assert "setTimeout(connectVideo" in html
+    assert "RTCPeerConnection" in html
+    assert 'type: "offer"' in html
+    assert "setTimeout(connectMJPEG" in html
     assert "/video.mjpg?t=${Date.now()}" in html
+
+
+def test_webrtc_only_frame_avoids_jpeg_encoding(monkeypatch):
+    class _FakeWebRTC:
+        def __init__(self):
+            self.frames = []
+
+        def push_frame(self, frame):
+            self.frames.append(frame)
+
+    server = StreamingServer()
+    server._webrtc = _FakeWebRTC()
+    monkeypatch.setattr(
+        "stream.server.Image.fromarray",
+        lambda *args, **kwargs: pytest.fail("JPEG encoding should not run"),
+    )
+    frame = np.zeros((4, 6, 3), dtype=np.uint8)
+    asyncio.run(server.send_video_frame(frame, 1, 0.0))
+    assert len(server._webrtc.frames) == 1
+    assert server._webrtc.frames[0] is frame

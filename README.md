@@ -31,7 +31,7 @@ separated and unsupported high-fidelity keys fail loudly.
   [validation/real_data/](validation/real_data/README.md)
 - GRACE-FO accelerometer-density benchmark with an untouched storm test:
   [validation/density/](validation/density/README.md)
-- 79 tests covering physics, configuration, streaming, visualization geometry,
+- 87 tests covering physics, configuration, streaming, visualization geometry,
   uncertainty and data
   protocols
 
@@ -73,11 +73,15 @@ uv to replace it with a generic CUDA wheel. Then install this project:
 
 ```bash
 python -m pip install -e ".[all]"
+sudo apt-get install gstreamer1.0-nice gstreamer1.0-plugins-bad
 ```
 
 Confirm `python -c "import torch; print(torch.__version__)"` still reports the
 NVIDIA-provided build. Jetson/PyTorch compatibility is controlled by NVIDIA,
 so a universal wheel is intentionally not pinned here.
+Hardware-H.264 WebRTC additionally requires JetPack's `nvvidconv` and
+`nvv4l2h264enc` GStreamer elements. The browser retains MJPEG as a compatibility
+fallback when WebRTC is disabled or genuinely unavailable.
 
 ## Run
 

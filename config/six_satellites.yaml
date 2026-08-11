@@ -2,19 +2,23 @@
 # Values inherit from config/default.yaml unless overridden here.
 
 environment:
+  env_dt: 5.0
   max_steps: 0
 
 render:
   camera_mode: fixed
   camera_target: polar-a
-  fps: 15
-  trail_length: 900
+  fps: 30
+  trail_length: 1500
 
 stream:
   video_port: 9110
   telemetry_port: 9111
   http_port: 8084
   jpeg_quality: 75
+  webrtc_enabled: true
+  webrtc_port: 8085
+  webrtc_bitrate: 4000000
 
 satellites:
   - id: equatorial-a

@@ -21,7 +21,7 @@
     align-items: center;
     justify-content: center;
   }
-  .stage img {
+  .stage img, .stage video {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -56,7 +56,8 @@
 </head>
 <body>
 <div class="stage">
-  <img id="video" alt="orbital video stream" />
+  <video id="video" autoplay muted playsinline></video>
+  <img id="mjpeg" alt="orbital video stream" hidden />
   <div class="hud" id="hud">connecting…</div>
   <div class="conn off" id="conn">telemetry: off</div>
 </div>
@@ -64,21 +65,86 @@
   const hud  = document.getElementById("hud");
   const conn = document.getElementById("conn");
   const video = document.getElementById("video");
+  const mjpeg = document.getElementById("mjpeg");
   let videoRetry = null;
+  let receivedWebRTC = false;
 
-  function connectVideo() {
-    // The simulation may restart when its camera mode changes. A cache-busting
-    // URL forces Safari and other browsers to open a fresh MJPEG connection.
-    video.src = `/video.mjpg?t=${Date.now()}`;
+  function connectMJPEG() {
+    if (receivedWebRTC) return;
+    video.hidden = true;
+    mjpeg.hidden = false;
+    conn.textContent = "video: MJPEG fallback";
+    mjpeg.src = `/video.mjpg?t=${Date.now()}`;
   }
 
-  video.onerror = () => {
-    video.removeAttribute("src");
+  mjpeg.onerror = () => {
+    mjpeg.removeAttribute("src");
     clearTimeout(videoRetry);
-    videoRetry = setTimeout(connectVideo, 750);
+    videoRetry = setTimeout(connectMJPEG, 750);
   };
 
-  connectVideo();
+  async function connectWebRTC() {
+    const signalPort = Number(location.port || 80) + 1;
+    const ws = new WebSocket(`ws://${location.hostname}:${signalPort}`);
+    const pc = new RTCPeerConnection({iceServers: []});
+    const pendingIce = [];
+    pc.addTransceiver("video", {direction: "recvonly"});
+    const fallbackTimer = setTimeout(connectMJPEG, 20000);
+    pc.ontrack = (event) => {
+      mjpeg.removeAttribute("src");
+      mjpeg.hidden = true;
+      video.hidden = false;
+      video.srcObject = event.streams[0];
+      conn.textContent = "video: WebRTC decoding";
+      conn.classList.remove("off");
+      video.play().catch(() => {});
+      if (video.requestVideoFrameCallback) {
+        video.requestVideoFrameCallback(() => {
+          receivedWebRTC = true;
+          clearTimeout(fallbackTimer);
+          conn.textContent = "video: H.264 WebRTC";
+        });
+      } else {
+        video.onplaying = () => {
+          receivedWebRTC = true;
+          clearTimeout(fallbackTimer);
+          conn.textContent = "video: H.264 WebRTC";
+        };
+      }
+    };
+    pc.onicecandidate = (event) => {
+      if (event.candidate && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({type: "ice", ...event.candidate.toJSON()}));
+      }
+    };
+    ws.onmessage = async (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === "answer") {
+        await pc.setRemoteDescription({type: "answer", sdp: message.sdp});
+        while (pendingIce.length) await pc.addIceCandidate(pendingIce.shift());
+      } else if (message.type === "ice") {
+        if (pc.remoteDescription) await pc.addIceCandidate(message);
+        else pendingIce.push(message);
+      }
+    };
+    ws.onopen = async () => {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.send(JSON.stringify({type: "offer", sdp: offer.sdp}));
+    };
+    ws.onerror = () => {
+      clearTimeout(fallbackTimer);
+      connectMJPEG();
+    };
+    pc.onconnectionstatechange = () => {
+      if (["failed", "closed"].includes(pc.connectionState)) {
+        clearTimeout(fallbackTimer);
+        connectMJPEG();
+      }
+    };
+  }
+
+  connectWebRTC().catch(connectMJPEG);
 
   function fmt(v, digits = 1) {
     return (typeof v === "number") ? v.toFixed(digits) : "—";
@@ -98,8 +164,8 @@
   }
 
   const es = new EventSource("/telemetry.sse");
-  es.onopen    = () => { conn.textContent = "telemetry: live"; conn.classList.remove("off"); };
-  es.onerror   = () => { conn.textContent = "telemetry: reconnecting"; conn.classList.add("off"); };
+  es.onopen    = () => { conn.classList.remove("off"); };
+  es.onerror   = () => { if (!receivedWebRTC) conn.classList.add("off"); };
   es.onmessage = (e) => {
     try { render(JSON.parse(e.data)); } catch (_) {}
   };
