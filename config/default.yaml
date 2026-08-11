@@ -15,16 +15,27 @@ satellite:
   drag_coefficient: 2.2
   reflectivity_coefficient: 1.5
   area_to_mass_ratio: 0.01        # m²/kg
+  drag_area_m2: 1.0               # independent projected drag area
+  srp_area_m2: 1.0                # independent illuminated SRP area
   max_thrust_n: 0.1               # Maximum thrust per axis [N]
 
 # Propagator settings
 propagator:
+  backend: high_fidelity          # validated Brahe dynamics; 'legacy' is the fast educational model
   dt: 10.0                        # RK4 timestep [s]
   enable_j2: true
   max_j_degree: 6                 # J2 through J6
   enable_drag: true
   enable_srp: true
   enable_third_body: true
+  high_fidelity:
+    gravity_degree: 20            # EGM2008 degree/order
+    gravity_order: 20
+    enable_tides: true            # IERS solid Earth + pole tide
+    enable_relativity: true
+    abs_tol: 1.0e-6               # adaptive RKF78 tolerances
+    rel_tol: 1.0e-11
+    max_step: 60.0
 
 # Atmosphere model (used by drag)
 atmosphere:

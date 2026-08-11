@@ -61,6 +61,9 @@ def build_propagator(config: dict, epoch_jd: float) -> Propagator:
         "enable_drag": prop["enable_drag"],
         "cd": sat["drag_coefficient"],
         "area_mass": sat["area_to_mass_ratio"],
+        "mass": sat["mass_kg"],
+        "drag_area_m2": sat.get("drag_area_m2"),
+        "srp_area_m2": sat.get("srp_area_m2"),
         "enable_srp": prop["enable_srp"],
         "cr": sat["reflectivity_coefficient"],
         "enable_third_body": prop["enable_third_body"],
@@ -69,6 +72,14 @@ def build_propagator(config: dict, epoch_jd: float) -> Propagator:
         "device": "cpu",
         "dtype": torch.float64,
     }
+    # None means "derive area from area/mass"; omit those keys so the adapter
+    # can distinguish it from an explicit value.
+    prop_config = {k: v for k, v in prop_config.items() if v is not None}
+    hf = prop.get("high_fidelity", {})
+    prop_config.update(hf)
+    if prop.get("backend", "legacy") == "high_fidelity":
+        from core.high_fidelity import HighFidelityPropagator
+        return HighFidelityPropagator(prop_config)
     return Propagator(prop_config)
 
 

@@ -35,6 +35,11 @@ from core.frames import (
     gmst_from_jd,
 )
 from core.atmosphere import atmospheric_density
+from core.atmosphere import _ecef_to_geodetic
+from core.gravity import (
+    j2_acceleration, j3_acceleration, j4_acceleration,
+    j5_acceleration, j6_acceleration,
+)
 from core.srp import sun_position_eci
 from core.propagator import Propagator
 
@@ -513,3 +518,56 @@ class TestBatchedOperations:
                 assert rel < 1e-10, (
                     f"Batch element {k}, '{key}': batched vs single relative diff = {rel:.2e}"
                 )
+
+    def test_single_item_batch(self):
+        values = [torch.tensor([x], dtype=torch.float64) for x in (
+            R_EARTH + 500e3, 0.01, 0.5, 0.2, 0.3, 0.4,
+        )]
+        r, v = keplerian_to_cartesian(*values)
+        assert r.shape == (1, 3)
+        assert v.shape == (1, 3)
+
+
+class TestForceModelDefinitions:
+    @pytest.mark.parametrize("degree,j_value,fn", [
+        (2, 1.08263e-3, j2_acceleration),
+        (3, -2.53881e-6, j3_acceleration),
+        (4, -1.61988e-6, j4_acceleration),
+        (5, -2.27141e-7, j5_acceleration),
+        (6, 5.40788e-7, j6_acceleration),
+    ])
+    def test_zonal_acceleration_is_potential_gradient(self, degree, j_value, fn):
+        from numpy.polynomial.legendre import legval
+        import numpy as np
+
+        r = np.array([6.8e6, -1.1e6, 2.2e6], dtype=np.float64)
+
+        def potential(pos):
+            radius = np.linalg.norm(pos)
+            p_n = legval(pos[2] / radius, [0.0] * degree + [1.0])
+            return (-MU_EARTH / radius * j_value
+                    * (R_EARTH / radius) ** degree * p_n)
+
+        h = 0.1
+        reference = np.empty(3)
+        for axis in range(3):
+            delta = np.zeros(3)
+            delta[axis] = h
+            reference[axis] = (potential(r + delta) - potential(r - delta)) / (2 * h)
+
+        np.testing.assert_allclose(fn(r), reference, rtol=2e-7, atol=1e-12)
+
+    @pytest.mark.parametrize("latitude_deg", [0.0, 30.0, 51.6, 75.0, 90.0])
+    def test_wgs84_geodetic_roundtrip(self, latitude_deg):
+        import numpy as np
+        from core.constants import FLATTENING
+
+        lat = math.radians(latitude_deg)
+        e2 = FLATTENING * (2.0 - FLATTENING)
+        n = R_EARTH / math.sqrt(1.0 - e2 * math.sin(lat) ** 2)
+        altitude = 400e3
+        x = (n + altitude) * math.cos(lat)
+        z = (n * (1.0 - e2) + altitude) * math.sin(lat)
+        got_lat, got_alt = _ecef_to_geodetic(x, 0.0, z)
+        assert abs(got_lat - lat) < 1e-12
+        assert abs(got_alt - altitude) < 1e-5

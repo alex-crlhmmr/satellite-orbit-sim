@@ -16,6 +16,7 @@ Action space (3,):
 """
 
 import math
+from datetime import datetime
 import numpy as np
 import torch
 import gymnasium as gym
@@ -276,7 +277,16 @@ class OrbitalEnv(gym.Env):
         self.dt = prop["dt"]
         self.env_dt = env_cfg["env_dt"]
         self.max_steps = env_cfg["max_steps"]
-        self.epoch_jd = prop.get("epoch_jd", JD_J2000)
+        explicit_epoch_jd = "epoch_jd" in config.get("propagator", {})
+        if "epoch" in config and not explicit_epoch_jd:
+            from core.frames import datetime_to_jd
+            ep = self.config["epoch"]
+            self.epoch_jd = datetime_to_jd(datetime(
+                ep["year"], ep["month"], ep["day"], ep.get("hour", 0),
+                ep.get("minute", 0), ep.get("second", 0),
+            ))
+        else:
+            self.epoch_jd = prop.get("epoch_jd", JD_J2000)
 
         # Build the SAME propagator the free-flight simulator uses, so a
         # trained policy sees identical physics (J2-J6 + drag + SRP +
@@ -293,7 +303,7 @@ class OrbitalEnv(gym.Env):
             "cr": self.cr,
             "enable_third_body": prop["enable_third_body"],
             "epoch_jd": self.epoch_jd,
-            "atmosphere": cfg.get("atmosphere", {}),
+            "atmosphere": self.config.get("atmosphere", {}),
             "device": "cpu",
             "dtype": torch.float64,
         }

@@ -24,7 +24,9 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import torch
 
-from .constants import ATMOSPHERE_BANDS, OMEGA_EARTH, R_EARTH, MU_EARTH
+from .constants import (
+    ATMOSPHERE_BANDS, OMEGA_EARTH, R_EARTH, MU_EARTH, FLATTENING,
+)
 
 
 _BAND_BASE_ALT_M = np.array(
@@ -207,9 +209,9 @@ class NRLMSISE2Atmosphere:
         x_e = cg * r_eci[0] + sg * r_eci[1]
         y_e = -sg * r_eci[0] + cg * r_eci[1]
         z_e = r_eci[2]
-        r_mag = math.sqrt(x_e * x_e + y_e * y_e + z_e * z_e)
-        alt_km = (r_mag - R_EARTH) / 1000.0
-        lat_deg = math.degrees(math.asin(z_e / r_mag))
+        lat_rad, alt_m = _ecef_to_geodetic(x_e, y_e, z_e)
+        alt_km = alt_m / 1000.0
+        lat_deg = math.degrees(lat_rad)
         lon_deg = math.degrees(math.atan2(y_e, x_e))
 
         date = np.array([_jd_to_datetime_utc(jd)], dtype="datetime64[us]")
@@ -229,6 +231,32 @@ class NRLMSISE2Atmosphere:
         if not math.isfinite(rho) or rho < 0.0:
             return _density_scalar(alt_km * 1000.0)
         return rho
+
+
+def _ecef_to_geodetic(x: float, y: float, z: float) -> tuple[float, float]:
+    """WGS-84 ECEF to geodetic latitude and ellipsoidal altitude."""
+    a = R_EARTH
+    f = FLATTENING
+    e2 = f * (2.0 - f)
+    p = math.hypot(x, y)
+    if p < 1e-9:
+        b = a * (1.0 - f)
+        return math.copysign(math.pi / 2.0, z), abs(z) - b
+    lat = math.atan2(z, p * (1.0 - e2))
+    alt = 0.0
+    for _ in range(8):
+        sin_lat = math.sin(lat)
+        n = a / math.sqrt(1.0 - e2 * sin_lat * sin_lat)
+        alt = p / math.cos(lat) - n
+        next_lat = math.atan2(z, p * (1.0 - e2 * n / (n + alt)))
+        if abs(next_lat - lat) < 1e-14:
+            lat = next_lat
+            break
+        lat = next_lat
+    sin_lat = math.sin(lat)
+    n = a / math.sqrt(1.0 - e2 * sin_lat * sin_lat)
+    alt = p / math.cos(lat) - n
+    return lat, alt
 
 
 def make_atmosphere(config: dict):

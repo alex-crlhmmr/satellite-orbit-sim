@@ -2,6 +2,10 @@
 
 High-fidelity LEO satellite orbital simulation with real-time 3D rendering and TCP streaming. Built to run headless on NVIDIA Jetson Orin and stream video + telemetry to remote clients.
 
+The default configuration uses the validated research dynamics profile; see
+[the dynamics verification status](docs/dynamics_status.md) for its model
+inventory and remaining limitations.
+
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
 ![PyTorch](https://img.shields.io/badge/pytorch-2.0%2B-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)

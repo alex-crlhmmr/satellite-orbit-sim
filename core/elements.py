@@ -143,7 +143,7 @@ def keplerian_to_cartesian(
     v_pqw_x = -sqrt_mu_p * torch.sin(nu)
     v_pqw_y = sqrt_mu_p * (e + torch.cos(nu))
 
-    batched = a.dim() >= 1 and a.shape[0] > 1
+    batched = a.dim() >= 1
 
     if batched:
         r_pqw = torch.stack([r_pqw_x, r_pqw_y, torch.zeros_like(r_pqw_x)], dim=-1)
@@ -257,9 +257,13 @@ def cartesian_to_roe(
     a_d, e_d, i_d = oe_d["a"], oe_d["e"], oe_d["i"]
     raan_d, argp_d, nu_d = oe_d["raan"], oe_d["argp"], oe_d["nu"]
 
-    # Argument of latitude u = ω + ν
-    u_c = argp_c + nu_c
-    u_d = argp_d + nu_d
+    # Mean argument of latitude u_bar = ω + M. D'Amico ROE are mean
+    # relative elements; using true anomaly injects eccentricity-dependent
+    # short-period motion into delta-lambda.
+    M_c = true_to_mean_anomaly(nu_c, e_c)
+    M_d = true_to_mean_anomaly(nu_d, e_d)
+    u_c = argp_c + M_c
+    u_d = argp_d + M_d
 
     # Relative elements
     da = (a_d - a_c) / a_c
@@ -267,7 +271,8 @@ def cartesian_to_roe(
     dex = e_d * torch.cos(argp_d) - e_c * torch.cos(argp_c)
     dey = e_d * torch.sin(argp_d) - e_c * torch.sin(argp_c)
     dix = i_d - i_c
-    diy = (raan_d - raan_c) * torch.sin(i_c)
+    d_raan = _wrap_angle(raan_d - raan_c)
+    diy = d_raan * torch.sin(i_c)
 
     roe = torch.stack([da, dl, dex, dey, dix, diy], dim=-1)
     return roe

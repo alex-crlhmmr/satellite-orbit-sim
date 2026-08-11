@@ -6,3 +6,4 @@ Pillow>=10.0.0
 PyYAML>=6.0
 opencv-python>=4.8.0
 pymsis>=0.10
+brahe>=1.7,<2
