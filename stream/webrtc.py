@@ -164,6 +164,17 @@ class WebRTCServer:
         return peer
 
     async def _handle_client(self, websocket) -> None:
+        remote_ip = websocket.remote_address[0] if websocket.remote_address else None
+        stale_peers = [
+            peer for peer in self._peer_by_id.values()
+            if remote_ip is not None
+            and peer.websocket.remote_address
+            and peer.websocket.remote_address[0] == remote_ip
+        ]
+        for stale_peer in stale_peers:
+            await stale_peer.websocket.close(
+                code=1000, reason="Replaced by newer viewer session"
+            )
         if len(self._peer_by_id) >= self.max_clients:
             await websocket.close(code=1013, reason="WebRTC client limit reached")
             return
