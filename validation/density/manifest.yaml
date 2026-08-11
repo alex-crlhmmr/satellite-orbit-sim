@@ -1,0 +1,20 @@
+dataset:
+  name: GRACE-FO accelerometer-derived thermosphere density version 02c
+  provider: TU Delft Thermosphere Data
+  base_url: https://thermosphere.tudelft.nl/data/data/version_02/GRACE-FO_data/
+  license: CC BY 4.0
+  time_system: GPS
+  sampling_s: 10
+  citation_url: https://thermosphere.tudelft.nl/
+files:
+  - filename: GC_DNS_ACC_2024_04_v02c.zip
+    sha256: 78dce492bbfb2f3bdd71ed358256cf2786d51d836f32dafae9e8f206c375cebf
+  - filename: GC_DNS_ACC_2024_05_v02c.zip
+    sha256: 87b92b98232d9caeb23c912e82dd74b8b3a0704b8e34ad707bd53609c0f773fe
+  - filename: GC_DNS_ACC_2024_10_v02c.zip
+    sha256: 72e11a0456977e301ea568f1211631c9e5b69f83227c96e5dfb6cc8ff0b02c81
+space_weather:
+  filename: sw19571001-v1.7.0.txt
+  url: https://raw.githubusercontent.com/duncaneddy/brahe/d80449d2f08ea036b54809106f00e1936ff97768/data/space_weather/sw19571001.txt
+  sha256: f66c560eac63624ac6a869afa220fe2e425d76216c8385720a580133c7bfca62
+  format: CSSI Space Weather version 1.2

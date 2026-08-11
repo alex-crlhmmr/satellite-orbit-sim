@@ -10,6 +10,8 @@ Independent Orekit cross-validation, reproducible scenarios, and the latest
 error report are under [`validation/`](validation/README.md).
 Evidence-gated benchmarks against real Sentinel-1A and Swarm-A precise orbits are under
 [`validation/real_data/`](validation/real_data/README.md).
+Direct force-level validation against GRACE-FO accelerometer-derived density is
+under [`validation/density/`](validation/density/README.md).
 
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
 ![PyTorch](https://img.shields.io/badge/pytorch-2.0%2B-orange)
