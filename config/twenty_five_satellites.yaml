@@ -1,0 +1,52 @@
+# Twenty-five-spacecraft near-polar Walker-style LEO scenario.
+# Five planes, separated by 36 degrees in RAAN (the other 180 degrees describe
+# the same plane), each contain five evenly phased spacecraft. The 97.4-degree
+# constellation provides global ground-track access over time. Plane 1 is
+# exactly polar; the other four are 97.4-degree near-polar planes.
+
+environment:
+  env_dt: 5.0
+  max_steps: 0
+
+render:
+  camera_mode: fixed
+  camera_target: plane-01-sat-01
+  # Measured sustainable cadence for 25 independent high-fidelity propagators.
+  fps: 8
+  trail_length: 900
+
+stream:
+  video_port: 9110
+  telemetry_port: 9111
+  http_port: 8084
+  jpeg_quality: 75
+  webrtc_enabled: true
+  webrtc_port: 8085
+  webrtc_bitrate: 400000
+
+satellites:
+  - {id: plane-01-sat-01, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 90.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 0.0}}
+  - {id: plane-01-sat-02, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 90.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 72.0}}
+  - {id: plane-01-sat-03, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 90.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 144.0}}
+  - {id: plane-01-sat-04, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 90.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 216.0}}
+  - {id: plane-01-sat-05, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 90.0, raan_deg: 0.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 288.0}}
+  - {id: plane-02-sat-01, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 36.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 14.4}}
+  - {id: plane-02-sat-02, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 36.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 86.4}}
+  - {id: plane-02-sat-03, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 36.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 158.4}}
+  - {id: plane-02-sat-04, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 36.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 230.4}}
+  - {id: plane-02-sat-05, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 36.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 302.4}}
+  - {id: plane-03-sat-01, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 72.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 28.8}}
+  - {id: plane-03-sat-02, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 72.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 100.8}}
+  - {id: plane-03-sat-03, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 72.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 172.8}}
+  - {id: plane-03-sat-04, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 72.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 244.8}}
+  - {id: plane-03-sat-05, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 72.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 316.8}}
+  - {id: plane-04-sat-01, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 108.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 43.2}}
+  - {id: plane-04-sat-02, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 108.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 115.2}}
+  - {id: plane-04-sat-03, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 108.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 187.2}}
+  - {id: plane-04-sat-04, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 108.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 259.2}}
+  - {id: plane-04-sat-05, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 108.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 331.2}}
+  - {id: plane-05-sat-01, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 144.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 57.6}}
+  - {id: plane-05-sat-02, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 144.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 129.6}}
+  - {id: plane-05-sat-03, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 144.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 201.6}}
+  - {id: plane-05-sat-04, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 144.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 273.6}}
+  - {id: plane-05-sat-05, orbit: {semi_major_axis_m: 7078137.0, eccentricity: 0.0005, inclination_deg: 97.4, raan_deg: 144.0, arg_periapsis_deg: 0.0, true_anomaly_deg: 345.6}}
